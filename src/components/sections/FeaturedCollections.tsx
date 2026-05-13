@@ -30,7 +30,7 @@ const collections = [
     name: 'Retro Kits',
     tag: 'Classic Editions',
     href: '/shop?category=retro',
-    image: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=800&q=80',
+    image: '/images/collections/retrokits.png',
     color: 'from-stone-900/40',
   },
 ]
