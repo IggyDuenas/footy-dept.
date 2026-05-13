@@ -6,7 +6,7 @@ out
 .env.development.local
 .env.test.local
 .env.production.local
-.tsbuildinfo
+*.tsbuildinfo
 next-env.d.ts
 .DS_Store
 .log
