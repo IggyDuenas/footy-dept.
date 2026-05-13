@@ -33,6 +33,7 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null)
   const [showForm, setShowForm] = useState(false)
 
+  const [uploading, setUploading] = useState(false)
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     if (password === ADMIN_PASSWORD) {
@@ -94,6 +95,37 @@ export default function AdminPage() {
     await supabase.from('orders').update({ status }).eq('id', orderId)
     toast.success('Order status updated')
     fetchData()
+  }
+
+  const handleImageUpload = async (file: File) => {
+    if (!file) return
+    
+    setUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file)
+      
+      if (uploadError) {
+        toast.error('Upload failed: ' + uploadError.message)
+        setUploading(false)
+        return
+      }
+      
+      const { data } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName)
+      
+      setEditingProduct({ ...editingProduct, images: [data.publicUrl] })
+      toast.success('Image uploaded successfully')
+    } catch (error) {
+      toast.error('Upload error: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setUploading(false)
+    }
   }
 
   // Login screen
@@ -254,14 +286,27 @@ export default function AdminPage() {
                     </div>
 
                     <div className="col-span-2">
-                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Image URL</label>
-                      <input
-                        type="text"
-                        value={editingProduct.images?.[0] || ''}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, images: [e.target.value] })}
-                        placeholder="https://..."
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                      />
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Product Image</label>
+                      <div className="space-y-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => e.target.files && handleImageUpload(e.target.files[0])}
+                          disabled={uploading}
+                          className="w-full bg-white/5 border border-white/10 text-white/60 px-4 py-3 text-sm file:bg-blue-600 file:text-white file:border-0 file:px-3 file:py-1 file:text-xs file:font-semibold file:cursor-pointer disabled:opacity-50"
+                        />
+                        {uploading && <p className="text-blue-400 text-sm">Uploading...</p>}
+                        {editingProduct.images?.[0] && (
+                          <div className="relative w-full h-32 bg-white/5 border border-white/10">
+                            <Image
+                              src={editingProduct.images[0]}
+                              alt="Preview"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* IMPORTANT: Supplier link — never visible publicly */}
