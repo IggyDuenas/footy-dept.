@@ -16,9 +16,9 @@ import { useCartStore, useWishlistStore } from '@/store/cartStore'
 import toast from 'react-hot-toast'
 
 const DEMO: Record<string, Product> = {
-  'brazil-home-2026': { id:'1', name:'Brazil Home Jersey 2026', slug:'brazil-home-2026', category:'jersey', country:'brazil', season:'2026', version_type:'fan', description:'The iconic Seleção returns in full force. Crafted for the fanwear faithful — bold yellow, deep green, and a cut that moves with you.', price:89.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=900&q=80','https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=900&q=80'], sizes:['XS','S','M','L','XL','XXL'], featured:true, inventory:50, created_at:'' },
-  'france-away-2026': { id:'2', name:'France Away Kit 2026', slug:'france-away-2026', category:'jersey', country:'france', season:'2026', version_type:'fan', description:'Les Bleus go clean. The 2026 away edition in stark white with signature blue trim — a modern classic.', price:94.99, compare_at_price:124.99, images:['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=900&q=80','https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=900&q=80'], sizes:['XS','S','M','L','XL','XXL'], featured:true, inventory:35, created_at:'' },
-  'mystery-box-premium': { id:'4', name:'Mystery Box — Premium', slug:'mystery-box-premium', category:'mystery', country:'various', season:'2026', version_type:'mystery', description:'You pick the size, we pick the kit. Could be a retro gem, a current national team, or a limited edition. Always premium, always a surprise.', price:59.99, compare_at_price:99.99, images:['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=900&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:100, created_at:'' },
+  'brazil-home-2026':   { id:'1', name:'Brazil Home Jersey 2026', slug:'brazil-home-2026',   type:'national', country:'Brazil',  version:'fan', year:2026, description:'The iconic Seleção returns in full force. Crafted for the fanwear faithful — bold yellow, deep green, and a cut that moves with you.', price:89.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=900&q=80','https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=900&q=80'], sizes:['XS','S','M','L','XL','XXL'], featured:true, inventory:50, created_at:'' },
+  'france-away-2026':   { id:'2', name:'France Away Kit 2026',    slug:'france-away-2026',   type:'national', country:'France',  version:'fan', year:2026, description:'Les Bleus go clean. The 2026 away edition in stark white with signature blue trim — a modern classic.', price:94.99, compare_at_price:124.99, images:['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=900&q=80','https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=900&q=80'], sizes:['XS','S','M','L','XL','XXL'], featured:true, inventory:35, created_at:'' },
+  'mystery-box-premium':{ id:'4', name:'Mystery Box — Premium',   slug:'mystery-box-premium', type:'mystery',  country:'Various', version:'fan', year:2026, description:'You pick the size, we pick the kit. Could be a retro gem, a current national team, or a limited edition. Always premium, always a surprise.', price:59.99, compare_at_price:99.99, images:['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=900&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:100, created_at:'' },
 }
 
 const accordions = [
@@ -171,7 +171,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             {/* RIGHT — Product info */}
             <div className="flex flex-col">
               <p className="text-blue-400 text-xs tracking-[0.3em] uppercase mb-2">
-                {product.country} · {product.season}
+                {product.country} · {product.year}
               </p>
               <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight mb-4">
                 {product.name}

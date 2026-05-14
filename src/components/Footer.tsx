@@ -2,10 +2,10 @@ import Link from 'next/link'
 
 const links = {
   Shop: [
-    { label: 'Jerseys', href: '/shop?category=jersey' },
-    { label: 'Retro Collection', href: '/shop?category=retro' },
-    { label: 'National Teams', href: '/shop?category=national' },
-    { label: 'Mystery Box', href: '/shop?category=mystery' },
+    { label: 'Clubs', href: '/shop?type=club' },
+    { label: 'Retro Collection', href: '/shop?type=retro' },
+    { label: 'National Teams', href: '/shop?type=national' },
+    { label: 'Mystery Box', href: '/shop?type=mystery' },
   ],
   Support: [
     { label: 'Track Order', href: '/track' },

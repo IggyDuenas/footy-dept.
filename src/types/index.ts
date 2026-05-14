@@ -2,10 +2,11 @@ export interface Product {
   id: string
   name: string
   slug: string
-  category: string
+  type: 'club' | 'national' | 'retro' | 'mystery'
   country: string
-  season: string
-  version_type: 'player' | 'fan' | 'retro' | 'mystery'
+  league?: string
+  version: 'fan' | 'player'
+  year: number
   description: string
   price: number
   compare_at_price?: number

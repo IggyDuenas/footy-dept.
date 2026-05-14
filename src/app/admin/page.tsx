@@ -15,12 +15,35 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'footydept2026'
 
 type Tab = 'products' | 'orders'
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PRODUCT_TYPES = [
+  { value: 'club',     label: 'Club' },
+  { value: 'national', label: 'National Team' },
+  { value: 'retro',    label: 'Retro' },
+  { value: 'mystery',  label: 'Mystery Box' },
+]
+
+const LEAGUES = [
+  'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
+  'MLS', 'Liga Portugal', 'Eredivisie', 'Saudi Pro League',
+  'Brasileirão', 'Liga MX', 'Primera División',
+]
+
+const COUNTRIES = [
+  'Brazil', 'France', 'Argentina', 'Germany', 'Spain', 'England',
+  'USA', 'Italy', 'Portugal', 'Netherlands', 'Mexico', 'Belgium',
+  'Croatia', 'Uruguay', 'Japan', 'Morocco', 'Other',
+]
+
 const EMPTY_PRODUCT: Partial<Product> = {
-  name: '', slug: '', category: 'jersey', country: '', season: '2026',
-  version_type: 'fan', description: '', price: 0, compare_at_price: undefined,
-  images: [''], sizes: ['S', 'M', 'L', 'XL'], featured: false,
-  supplier_link: '', inventory: 0,
+  name: '', slug: '', type: 'national', country: '', league: undefined,
+  version: 'fan', year: 2026, description: '', price: 0,
+  compare_at_price: undefined, images: [''], sizes: ['S', 'M', 'L', 'XL'],
+  featured: false, supplier_link: '', inventory: 0,
 }
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
@@ -32,8 +55,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null)
   const [showForm, setShowForm] = useState(false)
-
   const [uploading, setUploading] = useState(false)
+  const [customCountry, setCustomCountry] = useState('')
+  const [customLeague, setCustomLeague] = useState('')
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     if (password === ADMIN_PASSWORD) {
@@ -67,7 +92,17 @@ export default function AdminPage() {
       toast.error('Name and slug are required')
       return
     }
+    if (!editingProduct.year || editingProduct.year < 1900 || editingProduct.year > 2100) {
+      toast.error('Year must be between 1900 and 2100')
+      return
+    }
+
     const productData = { ...editingProduct }
+    // Apply custom country / league overrides if "Other" was selected
+    if (productData.country === 'Other') productData.country = customCountry
+    if (productData.type !== 'club') delete productData.league
+    if (productData.league === 'Other') productData.league = customLeague
+    if (productData.type === 'retro' || productData.type === 'mystery') productData.version = 'fan'
     delete productData.id
 
     if (editingProduct.id) {
@@ -81,6 +116,8 @@ export default function AdminPage() {
     }
     setShowForm(false)
     setEditingProduct(null)
+    setCustomCountry('')
+    setCustomLeague('')
     fetchData()
   }
 
@@ -99,26 +136,13 @@ export default function AdminPage() {
 
   const handleImageUpload = async (file: File) => {
     if (!file) return
-    
     setUploading(true)
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-      
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file)
-      
-      if (uploadError) {
-        toast.error('Upload failed: ' + uploadError.message)
-        setUploading(false)
-        return
-      }
-      
-      const { data } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName)
-      
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, file)
+      if (uploadError) { toast.error('Upload failed: ' + uploadError.message); return }
+      const { data } = supabase.storage.from('product-images').getPublicUrl(fileName)
       setEditingProduct({ ...editingProduct, images: [data.publicUrl] })
       toast.success('Image uploaded successfully')
     } catch (error) {
@@ -128,7 +152,22 @@ export default function AdminPage() {
     }
   }
 
-  // Login screen
+  const openNewForm = () => {
+    setEditingProduct({ ...EMPTY_PRODUCT })
+    setCustomCountry('')
+    setCustomLeague('')
+    setShowForm(true)
+  }
+
+  const openEditForm = (p: Product) => {
+    setEditingProduct(p)
+    setCustomCountry(COUNTRIES.includes(p.country) ? '' : p.country)
+    setCustomLeague(p.league && LEAGUES.includes(p.league) ? '' : (p.league ?? ''))
+    setShowForm(true)
+  }
+
+  // ── Login screen ───────────────────────────────────────────────────────────
+
   if (!authed) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center px-6">
@@ -169,6 +208,14 @@ export default function AdminPage() {
     )
   }
 
+  // ── Dashboard ──────────────────────────────────────────────────────────────
+
+  const ep = editingProduct
+  const isClub     = ep?.type === 'club'
+  const isNational = ep?.type === 'national'
+  const showVersion = isClub || isNational
+  const showLeague  = isClub
+
   return (
     <div className="min-h-screen bg-[#080808]">
       {/* Admin header */}
@@ -190,9 +237,9 @@ export default function AdminPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Total Products', value: products.length.toString(), icon: Package },
-            { label: 'Total Orders', value: orders.length.toString(), icon: ShoppingBag },
-            { label: 'Revenue', value: `$${orders.reduce((s, o) => s + o.total_price, 0).toFixed(2)}`, icon: TrendingUp },
-            { label: 'Pending', value: orders.filter((o) => o.status === 'pending').length.toString(), icon: Package },
+            { label: 'Total Orders',   value: orders.length.toString(),   icon: ShoppingBag },
+            { label: 'Revenue',        value: `$${orders.reduce((s, o) => s + o.total_price, 0).toFixed(2)}`, icon: TrendingUp },
+            { label: 'Pending',        value: orders.filter((o) => o.status === 'pending').length.toString(), icon: Package },
           ].map((stat) => (
             <div key={stat.label} className="bg-black border border-white/10 p-5">
               <stat.icon size={18} className="text-blue-400 mb-3" />
@@ -219,13 +266,13 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* PRODUCTS TAB */}
+        {/* ── PRODUCTS TAB ─────────────────────────────────────────────────── */}
         {tab === 'products' && (
           <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-white font-black text-2xl uppercase">Products</h2>
               <button
-                onClick={() => { setEditingProduct({ ...EMPTY_PRODUCT }); setShowForm(true) }}
+                onClick={openNewForm}
                 className="flex items-center gap-2 bg-white text-black font-black text-xs tracking-widest uppercase px-5 py-3 hover:bg-blue-500 hover:text-white transition-colors"
               >
                 <Plus size={14} /> Add Product
@@ -233,7 +280,7 @@ export default function AdminPage() {
             </div>
 
             {/* Product form modal */}
-            {showForm && editingProduct && (
+            {showForm && ep && (
               <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
                 <motion.div
                   initial={{ scale: 0.95, opacity: 0 }}
@@ -242,7 +289,7 @@ export default function AdminPage() {
                 >
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-white font-black text-xl uppercase">
-                      {editingProduct.id ? 'Edit Product' : 'Add Product'}
+                      {ep.id ? 'Edit Product' : 'Add Product'}
                     </h3>
                     <button onClick={() => setShowForm(false)} className="text-white/40 hover:text-white">
                       <X size={20} />
@@ -250,41 +297,174 @@ export default function AdminPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    {[
-                      { label: 'Name', key: 'name', type: 'text' },
-                      { label: 'Slug', key: 'slug', type: 'text' },
-                      { label: 'Price', key: 'price', type: 'number' },
-                      { label: 'Compare Price', key: 'compare_at_price', type: 'number' },
-                      { label: 'Country', key: 'country', type: 'text' },
-                      { label: 'Season', key: 'season', type: 'text' },
-                      { label: 'Inventory', key: 'inventory', type: 'number' },
-                    ].map((field) => (
-                      <div key={field.key}>
-                        <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">{field.label}</label>
-                        <input
-                          type={field.type}
-                          value={(editingProduct as Record<string, unknown>)[field.key] as string || ''}
-                          onChange={(e) =>
-                            setEditingProduct({
-                              ...editingProduct,
-                              [field.key]: field.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value,
-                            })
-                          }
-                          className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                        />
-                      </div>
-                    ))}
+                    {/* Name */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Name</label>
+                      <input
+                        type="text"
+                        value={ep.name || ''}
+                        onChange={(e) => setEditingProduct({ ...ep, name: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      />
+                    </div>
 
+                    {/* Slug */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Slug</label>
+                      <input
+                        type="text"
+                        value={ep.slug || ''}
+                        onChange={(e) => setEditingProduct({ ...ep, slug: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      />
+                    </div>
+
+                    {/* Type */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Type</label>
+                      <select
+                        value={ep.type || 'national'}
+                        onChange={(e) => {
+                          const t = e.target.value as Product['type']
+                          setEditingProduct({ ...ep, type: t, league: undefined, version: 'fan' })
+                        }}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      >
+                        {PRODUCT_TYPES.map(({ value, label }) => (
+                          <option key={value} value={value} className="bg-[#111]">{label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Country */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Country</label>
+                      <select
+                        value={COUNTRIES.includes(ep.country || '') ? ep.country : 'Other'}
+                        onChange={(e) => {
+                          setEditingProduct({ ...ep, country: e.target.value === 'Other' ? 'Other' : e.target.value })
+                          if (e.target.value !== 'Other') setCustomCountry('')
+                        }}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      >
+                        {COUNTRIES.map((c) => (
+                          <option key={c} value={c} className="bg-[#111]">{c}</option>
+                        ))}
+                      </select>
+                      {ep.country === 'Other' && (
+                        <input
+                          type="text"
+                          placeholder="Enter country name"
+                          value={customCountry}
+                          onChange={(e) => setCustomCountry(e.target.value)}
+                          className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                        />
+                      )}
+                    </div>
+
+                    {/* League — only for clubs */}
+                    {showLeague && (
+                      <div>
+                        <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">League</label>
+                        <select
+                          value={ep.league && LEAGUES.includes(ep.league) ? ep.league : (ep.league ? 'Other' : '')}
+                          onChange={(e) => {
+                            setEditingProduct({ ...ep, league: e.target.value === 'Other' ? 'Other' : e.target.value })
+                            if (e.target.value !== 'Other') setCustomLeague('')
+                          }}
+                          className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                        >
+                          <option value="" className="bg-[#111]">Select league…</option>
+                          {LEAGUES.map((l) => (
+                            <option key={l} value={l} className="bg-[#111]">{l}</option>
+                          ))}
+                          <option value="Other" className="bg-[#111]">Other</option>
+                        </select>
+                        {ep.league === 'Other' && (
+                          <input
+                            type="text"
+                            placeholder="Enter league name"
+                            value={customLeague}
+                            onChange={(e) => setCustomLeague(e.target.value)}
+                            className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Year */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Year</label>
+                      <input
+                        type="number"
+                        min={1900}
+                        max={2100}
+                        value={ep.year || 2026}
+                        onChange={(e) => setEditingProduct({ ...ep, year: parseInt(e.target.value) || 2026 })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      />
+                    </div>
+
+                    {/* Version — only for club or national */}
+                    {showVersion && (
+                      <div>
+                        <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Version</label>
+                        <select
+                          value={ep.version || 'fan'}
+                          onChange={(e) => setEditingProduct({ ...ep, version: e.target.value as 'fan' | 'player' })}
+                          className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                        >
+                          <option value="fan"    className="bg-[#111]">Fan</option>
+                          <option value="player" className="bg-[#111]">Player</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Price */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Price</label>
+                      <input
+                        type="number"
+                        value={ep.price || 0}
+                        onChange={(e) => setEditingProduct({ ...ep, price: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      />
+                    </div>
+
+                    {/* Compare price */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Compare Price</label>
+                      <input
+                        type="number"
+                        value={ep.compare_at_price || ''}
+                        onChange={(e) => setEditingProduct({ ...ep, compare_at_price: parseFloat(e.target.value) || undefined })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      />
+                    </div>
+
+                    {/* Inventory */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Inventory</label>
+                      <input
+                        type="number"
+                        value={ep.inventory || 0}
+                        onChange={(e) => setEditingProduct({ ...ep, inventory: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      />
+                    </div>
+
+                    {/* Description */}
                     <div className="col-span-2">
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Description</label>
                       <textarea
-                        value={editingProduct.description || ''}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                        value={ep.description || ''}
+                        onChange={(e) => setEditingProduct({ ...ep, description: e.target.value })}
                         rows={3}
                         className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30 resize-none"
                       />
                     </div>
 
+                    {/* Product image upload */}
                     <div className="col-span-2">
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Product Image</label>
                       <div className="space-y-3">
@@ -296,40 +476,36 @@ export default function AdminPage() {
                           className="w-full bg-white/5 border border-white/10 text-white/60 px-4 py-3 text-sm file:bg-blue-600 file:text-white file:border-0 file:px-3 file:py-1 file:text-xs file:font-semibold file:cursor-pointer disabled:opacity-50"
                         />
                         {uploading && <p className="text-blue-400 text-sm">Uploading...</p>}
-                        {editingProduct.images?.[0] && (
+                        {ep.images?.[0] && (
                           <div className="relative w-full h-32 bg-white/5 border border-white/10">
-                            <Image
-                              src={editingProduct.images[0]}
-                              alt="Preview"
-                              fill
-                              className="object-cover"
-                            />
+                            <Image src={ep.images[0]} alt="Preview" fill className="object-cover" />
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* IMPORTANT: Supplier link — never visible publicly */}
+                    {/* Supplier link */}
                     <div className="col-span-2">
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">
                         Supplier Link <span className="text-red-400">(Private — never displayed publicly)</span>
                       </label>
                       <input
                         type="text"
-                        value={editingProduct.supplier_link || ''}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, supplier_link: e.target.value })}
+                        value={ep.supplier_link || ''}
+                        onChange={(e) => setEditingProduct({ ...ep, supplier_link: e.target.value })}
                         placeholder="https://supplier.com/product/..."
                         className="w-full bg-red-950/20 border border-red-500/20 text-white px-4 py-3 text-sm outline-none focus:border-red-500/40"
                       />
                     </div>
 
+                    {/* Featured toggle */}
                     <div className="col-span-2">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <div
-                          onClick={() => setEditingProduct({ ...editingProduct, featured: !editingProduct.featured })}
-                          className={`w-10 h-5 rounded-full transition-colors ${editingProduct.featured ? 'bg-blue-500' : 'bg-white/10'}`}
+                          onClick={() => setEditingProduct({ ...ep, featured: !ep.featured })}
+                          className={`w-10 h-5 rounded-full transition-colors ${ep.featured ? 'bg-blue-500' : 'bg-white/10'}`}
                         >
-                          <div className={`w-4 h-4 bg-white rounded-full mt-0.5 transition-transform ${editingProduct.featured ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                          <div className={`w-4 h-4 bg-white rounded-full mt-0.5 transition-transform ${ep.featured ? 'translate-x-5' : 'translate-x-0.5'}`} />
                         </div>
                         <span className="text-white/60 text-sm">Featured product</span>
                       </label>
@@ -371,7 +547,7 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10">
-                      {['Product', 'Category', 'Price', 'Inventory', 'Featured', 'Actions'].map((h) => (
+                      {['Name', 'Type', 'Country', 'Year', 'Price', 'Inventory', 'Featured', 'Actions'].map((h) => (
                         <th key={h} className="text-left text-white/40 text-xs tracking-widest uppercase pb-3 pr-4">{h}</th>
                       ))}
                     </tr>
@@ -392,7 +568,9 @@ export default function AdminPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 pr-4 text-white/50 capitalize">{p.category}</td>
+                        <td className="py-4 pr-4 text-white/50 capitalize">{p.type}</td>
+                        <td className="py-4 pr-4 text-white/50">{p.country}</td>
+                        <td className="py-4 pr-4 text-white/50">{p.year}</td>
                         <td className="py-4 pr-4 text-white font-semibold">${p.price.toFixed(2)}</td>
                         <td className="py-4 pr-4">
                           <span className={`text-xs font-bold ${p.inventory < 5 ? 'text-red-400' : 'text-white/60'}`}>
@@ -400,16 +578,15 @@ export default function AdminPage() {
                           </span>
                         </td>
                         <td className="py-4 pr-4">
-                          {p.featured ? (
-                            <span className="text-blue-400 text-xs">Yes</span>
-                          ) : (
-                            <span className="text-white/20 text-xs">No</span>
-                          )}
+                          {p.featured
+                            ? <span className="text-blue-400 text-xs">Yes</span>
+                            : <span className="text-white/20 text-xs">No</span>
+                          }
                         </td>
                         <td className="py-4">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => { setEditingProduct(p); setShowForm(true) }}
+                              onClick={() => openEditForm(p)}
                               className="text-white/40 hover:text-white transition-colors"
                             >
                               <Edit size={14} />
@@ -431,7 +608,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ORDERS TAB */}
+        {/* ── ORDERS TAB ───────────────────────────────────────────────────── */}
         {tab === 'orders' && (
           <div>
             <h2 className="text-white font-black text-2xl uppercase mb-6">Orders</h2>
@@ -471,8 +648,8 @@ export default function AdminPage() {
                         <option value="delivered">Delivered</option>
                       </select>
                       <span className={`text-xs px-2 py-1 font-bold uppercase tracking-wider ${
-                        order.status === 'delivered' ? 'bg-green-500/10 text-green-400' :
-                        order.status === 'shipped' ? 'bg-blue-500/10 text-blue-400' :
+                        order.status === 'delivered'  ? 'bg-green-500/10 text-green-400' :
+                        order.status === 'shipped'    ? 'bg-blue-500/10 text-blue-400' :
                         order.status === 'processing' ? 'bg-yellow-500/10 text-yellow-400' :
                         'bg-white/5 text-white/40'
                       }`}>

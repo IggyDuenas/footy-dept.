@@ -12,23 +12,68 @@ import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabase'
 import { Product } from '@/types'
 
-const DEMO_PRODUCTS: Product[] = [
-  { id:'1', name:'Brazil Home Jersey 2026', slug:'brazil-home-2026', category:'jersey', country:'brazil', season:'2026', version_type:'fan', description:'Iconic yellow and green.', price:89.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:50, created_at:'' },
-  { id:'2', name:'France Away Kit 2026', slug:'france-away-2026', category:'jersey', country:'france', season:'2026', version_type:'fan', description:'Clean white away edition.', price:94.99, compare_at_price:124.99, images:['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:35, created_at:'' },
-  { id:'3', name:"Argentina '86 Retro", slug:'argentina-86-retro', category:'retro', country:'argentina', season:'1986', version_type:'retro', description:'Hand-of-God era classic.', price:79.99, images:['https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:20, created_at:'' },
-  { id:'4', name:'Mystery Box — Premium', slug:'mystery-box-premium', category:'mystery', country:'various', season:'2026', version_type:'mystery', description:'Surprise kit.', price:59.99, compare_at_price:99.99, images:['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:100, created_at:'' },
-  { id:'5', name:'USA 2026 World Cup Kit', slug:'usa-2026-home', category:'national', country:'usa', season:'2026', version_type:'fan', description:'Host nation, home edition.', price:84.99, compare_at_price:109.99, images:['https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=600&q=80'], sizes:['S','M','L','XL','XXL'], featured:true, inventory:60, created_at:'' },
-  { id:'6', name:"Germany Classic '90 Retro", slug:'germany-90-retro', category:'retro', country:'germany', season:'1990', version_type:'retro', description:'World Cup winners edition.', price:74.99, images:['https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:15, created_at:'' },
-  { id:'7', name:'Spain Home 2026', slug:'spain-home-2026', category:'jersey', country:'spain', season:'2026', version_type:'fan', description:'La Roja returns.', price:89.99, images:['https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:40, created_at:'' },
-  { id:'8', name:'England Away 2026', slug:'england-away-2026', category:'jersey', country:'england', season:'2026', version_type:'fan', description:'Three Lions away.', price:92.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:30, created_at:'' },
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const TYPES = [
+  { value: 'club',     label: 'Clubs' },
+  { value: 'national', label: 'National Teams' },
+  { value: 'retro',    label: 'Retro' },
+  { value: 'mystery',  label: 'Mystery Box' },
 ]
 
-const FILTERS = {
-  category: ['jersey', 'retro', 'national', 'mystery'],
-  country: ['brazil', 'france', 'argentina', 'germany', 'spain', 'england', 'usa', 'italy'],
-  version_type: ['fan', 'player', 'retro', 'mystery'],
-  season: ['2026', '2024', '2022', '1990', '1986', '1970'],
+const LEAGUES = [
+  'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
+  'MLS', 'Liga Portugal', 'Eredivisie', 'Saudi Pro League',
+  'Brasileirão', 'Liga MX', 'Primera División',
+]
+
+const COUNTRIES = [
+  'Brazil', 'France', 'Argentina', 'Germany', 'Spain', 'England',
+  'USA', 'Italy', 'Portugal', 'Netherlands', 'Mexico', 'Belgium',
+  'Croatia', 'Uruguay', 'Japan', 'Morocco',
+]
+
+const ERAS = ['2020s', '2010s', '2000s', '1990s', '1980s', '1970s']
+
+const ERA_RANGES: Record<string, [number, number]> = {
+  '2020s': [2020, 2029],
+  '2010s': [2010, 2019],
+  '2000s': [2000, 2009],
+  '1990s': [1990, 1999],
+  '1980s': [1980, 1989],
+  '1970s': [1970, 1979],
 }
+
+// URL slug helpers
+const toSlug = (s: string) =>
+  s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+const fromSlug = (slug: string, list: string[]) =>
+  list.find((item) => toSlug(item) === slug) ?? null
+
+// ─── Demo products ────────────────────────────────────────────────────────────
+
+const DEMO_PRODUCTS: Product[] = [
+  { id:'1', name:'Brazil Home Jersey 2026', slug:'brazil-home-2026', type:'national', country:'Brazil', version:'fan', year:2026, description:'Iconic yellow and green.', price:89.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:50, created_at:'' },
+  { id:'2', name:'France Away Kit 2026', slug:'france-away-2026', type:'national', country:'France', version:'fan', year:2026, description:'Clean white away edition.', price:94.99, compare_at_price:124.99, images:['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:35, created_at:'' },
+  { id:'3', name:"Argentina '86 Retro", slug:'argentina-86-retro', type:'retro', country:'Argentina', version:'fan', year:1986, description:'Hand-of-God era classic.', price:79.99, images:['https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:20, created_at:'' },
+  { id:'4', name:'Mystery Box — Premium', slug:'mystery-box-premium', type:'mystery', country:'Various', version:'fan', year:2026, description:'Surprise kit.', price:59.99, compare_at_price:99.99, images:['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:100, created_at:'' },
+  { id:'5', name:'USA 2026 World Cup Kit', slug:'usa-2026-home', type:'national', country:'USA', version:'fan', year:2026, description:'Host nation, home edition.', price:84.99, compare_at_price:109.99, images:['https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=600&q=80'], sizes:['S','M','L','XL','XXL'], featured:true, inventory:60, created_at:'' },
+  { id:'6', name:"Germany Classic '90 Retro", slug:'germany-90-retro', type:'retro', country:'Germany', version:'fan', year:1990, description:'World Cup winners edition.', price:74.99, images:['https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:15, created_at:'' },
+  { id:'7', name:'Spain Home 2026', slug:'spain-home-2026', type:'national', country:'Spain', version:'fan', year:2026, description:'La Roja returns.', price:89.99, images:['https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:40, created_at:'' },
+  { id:'8', name:'England Away 2026', slug:'england-away-2026', type:'national', country:'England', version:'fan', year:2026, description:'Three Lions away.', price:92.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:30, created_at:'' },
+]
+
+// ─── Filter state type ─────────────────────────────────────────────────────────
+
+interface Filters {
+  type?: string
+  league?: string
+  country?: string
+  version?: string
+  era?: string
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 function ShopContent() {
   const searchParams = useSearchParams()
@@ -36,23 +81,53 @@ function ShopContent() {
   const [loading, setLoading] = useState(true)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
+  const [activeFilters, setActiveFilters] = useState<Filters>({})
 
+  // Initialise filters from URL params on mount
   useEffect(() => {
-    const initial: Record<string, string> = {}
-    if (searchParams.get('category')) initial.category = searchParams.get('category')!
-    if (searchParams.get('country')) initial.country = searchParams.get('country')!
-    setActiveFilters(initial)
-  }, [searchParams])
+    const initial: Filters = {}
+    const typeParam = searchParams.get('type')
+    if (typeParam && TYPES.some((t) => t.value === typeParam)) initial.type = typeParam
 
+    const leagueParam = searchParams.get('league')
+    if (leagueParam) {
+      const found = fromSlug(leagueParam, LEAGUES)
+      if (found) initial.league = found
+    }
+
+    const countryParam = searchParams.get('country')
+    if (countryParam) {
+      const found = fromSlug(countryParam, COUNTRIES) ?? COUNTRIES.find(
+        (c) => c.toLowerCase() === countryParam.toLowerCase()
+      )
+      if (found) initial.country = found
+    }
+
+    const versionParam = searchParams.get('version')
+    if (versionParam === 'fan' || versionParam === 'player') initial.version = versionParam
+
+    const eraParam = searchParams.get('era')
+    if (eraParam && ERA_RANGES[eraParam]) initial.era = eraParam
+
+    setActiveFilters(initial)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Fetch products whenever filters change
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true)
       let query = supabase.from('products').select('*')
-      if (activeFilters.category) query = query.eq('category', activeFilters.category)
-      if (activeFilters.country) query = query.eq('country', activeFilters.country)
-      if (activeFilters.version_type) query = query.eq('version_type', activeFilters.version_type)
-      if (activeFilters.season) query = query.eq('season', activeFilters.season)
+
+      if (activeFilters.type)    query = query.eq('type', activeFilters.type)
+      if (activeFilters.league)  query = query.eq('league', activeFilters.league)
+      if (activeFilters.country) query = query.ilike('country', activeFilters.country)
+      if (activeFilters.version) query = query.eq('version', activeFilters.version)
+      if (activeFilters.era) {
+        const [min, max] = ERA_RANGES[activeFilters.era]
+        query = query.gte('year', min).lte('year', max)
+      }
+
       const { data } = await query.order('created_at', { ascending: false })
       setProducts(data?.length ? data : filterDemo(activeFilters))
       setLoading(false)
@@ -60,17 +135,39 @@ function ShopContent() {
     fetchProducts()
   }, [activeFilters])
 
-  const filterDemo = (filters: Record<string, string>) => {
-    return DEMO_PRODUCTS.filter((p) => {
-      if (filters.category && p.category !== filters.category) return false
-      if (filters.country && p.country !== filters.country) return false
-      if (filters.version_type && p.version_type !== filters.version_type) return false
-      if (filters.season && p.season !== filters.season) return false
+  const filterDemo = (filters: Filters) =>
+    DEMO_PRODUCTS.filter((p) => {
+      if (filters.type    && p.type !== filters.type) return false
+      if (filters.league  && p.league !== filters.league) return false
+      if (filters.country && p.country.toLowerCase() !== filters.country.toLowerCase()) return false
+      if (filters.version && p.version !== filters.version) return false
+      if (filters.era) {
+        const [min, max] = ERA_RANGES[filters.era]
+        if (p.year < min || p.year > max) return false
+      }
       return true
+    })
+
+  // When type changes, clear filters that no longer apply
+  const setType = (value: string) => {
+    setActiveFilters((prev) => {
+      if (prev.type === value) {
+        // deselect
+        const { type: _t, league: _l, country: _c, version: _v, ...rest } = prev
+        return rest
+      }
+      const next: Filters = { ...prev, type: value }
+      // clear league when not club
+      if (value !== 'club') delete next.league
+      // clear country when not national
+      if (value !== 'national') delete next.country
+      // clear version when retro or mystery
+      if (value === 'retro' || value === 'mystery') delete next.version
+      return next
     })
   }
 
-  const toggleFilter = (key: string, value: string) => {
+  const toggleFilter = (key: keyof Omit<Filters, 'type'>, value: string) => {
     setActiveFilters((prev) => {
       const next = { ...prev }
       if (next[key] === value) delete next[key]
@@ -80,6 +177,13 @@ function ShopContent() {
   }
 
   const activeCount = Object.keys(activeFilters).length
+  const activeType = activeFilters.type
+
+  // Pill display label
+  const pillLabel = (key: string, val: string) => {
+    if (key === 'type') return TYPES.find((t) => t.value === val)?.label ?? val
+    return val
+  }
 
   return (
     <main>
@@ -118,10 +222,14 @@ function ShopContent() {
             {Object.entries(activeFilters).map(([key, val]) => (
               <button
                 key={key}
-                onClick={() => toggleFilter(key, val)}
+                onClick={() =>
+                  key === 'type'
+                    ? setType(val)
+                    : toggleFilter(key as keyof Omit<Filters, 'type'>, val)
+                }
                 className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 px-3 py-1.5 text-xs tracking-wider uppercase"
               >
-                {val}
+                {pillLabel(key, val)}
                 <X size={10} />
               </button>
             ))}
@@ -146,26 +254,101 @@ function ShopContent() {
               exit={{ height: 0, opacity: 0 }}
               className="mb-8 border border-white/10 p-6 grid grid-cols-2 md:grid-cols-4 gap-6"
             >
-              {Object.entries(FILTERS).map(([key, values]) => (
-                <div key={key}>
-                  <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">{key.replace('_', ' ')}</p>
+              {/* TYPE — always visible */}
+              <div>
+                <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Type</p>
+                <div className="flex flex-col gap-2">
+                  {TYPES.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setType(value)}
+                      className={`text-left text-sm transition-colors ${
+                        activeFilters.type === value ? 'text-blue-400' : 'text-white/50 hover:text-white'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* LEAGUE — only when type === 'club' */}
+              {activeType === 'club' && (
+                <div>
+                  <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">League</p>
                   <div className="flex flex-col gap-2">
-                    {values.map((val) => (
+                    {LEAGUES.map((league) => (
                       <button
-                        key={val}
-                        onClick={() => toggleFilter(key, val)}
-                        className={`text-left text-sm capitalize transition-colors ${
-                          activeFilters[key] === val
-                            ? 'text-blue-400'
-                            : 'text-white/50 hover:text-white'
+                        key={league}
+                        onClick={() => toggleFilter('league', league)}
+                        className={`text-left text-sm transition-colors ${
+                          activeFilters.league === league ? 'text-blue-400' : 'text-white/50 hover:text-white'
                         }`}
                       >
-                        {val}
+                        {league}
                       </button>
                     ))}
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* COUNTRY — only when type === 'national' */}
+              {activeType === 'national' && (
+                <div>
+                  <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Country</p>
+                  <div className="flex flex-col gap-2">
+                    {COUNTRIES.map((country) => (
+                      <button
+                        key={country}
+                        onClick={() => toggleFilter('country', country)}
+                        className={`text-left text-sm transition-colors ${
+                          activeFilters.country === country ? 'text-blue-400' : 'text-white/50 hover:text-white'
+                        }`}
+                      >
+                        {country}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* VERSION — only for club or national */}
+              {(activeType === 'club' || activeType === 'national') && (
+                <div>
+                  <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Version</p>
+                  <div className="flex flex-col gap-2">
+                    {['fan', 'player'].map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => toggleFilter('version', v)}
+                        className={`text-left text-sm capitalize transition-colors ${
+                          activeFilters.version === v ? 'text-blue-400' : 'text-white/50 hover:text-white'
+                        }`}
+                      >
+                        {v === 'fan' ? 'Fan' : 'Player'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ERA — always visible */}
+              <div>
+                <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Era</p>
+                <div className="flex flex-col gap-2">
+                  {ERAS.map((era) => (
+                    <button
+                      key={era}
+                      onClick={() => toggleFilter('era', era)}
+                      className={`text-left text-sm transition-colors ${
+                        activeFilters.era === era ? 'text-blue-400' : 'text-white/50 hover:text-white'
+                      }`}
+                    >
+                      {era}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </motion.div>
           )}
 

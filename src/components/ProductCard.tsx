@@ -58,11 +58,14 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-            {product.version_type === 'retro' && (
+            {product.type === 'retro' && (
               <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">Retro</span>
             )}
-            {product.version_type === 'mystery' && (
+            {product.type === 'mystery' && (
               <span className="bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">Mystery</span>
+            )}
+            {product.version === 'player' && (
+              <span className="bg-white text-black text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">Player</span>
             )}
             {discount && (
               <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">-{discount}%</span>
