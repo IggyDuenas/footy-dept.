@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { use } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -55,8 +54,8 @@ const accordions = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
+export default function ProductPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState(0)
