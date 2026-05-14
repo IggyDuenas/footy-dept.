@@ -10,10 +10,10 @@ export interface Product {
   id: string
   name: string
   slug: string
-  type: 'club' | 'national' | 'retro' | 'mystery'
+  type: 'club' | 'national' | 'mystery'
   country: string
   league?: string
-  version: 'fan' | 'player'
+  version: 'fan' | 'player' | 'retro'
   year: number
   description: string
   price: number

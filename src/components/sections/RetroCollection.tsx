@@ -55,7 +55,7 @@ export default function RetroCollection() {
                 From Wembley &apos;66 to the Maracanã. Our retro collection brings back the kits that defined eras and inspired generations.
               </p>
               <Link
-                href="/shop?category=retro"
+                href="/shop?version=retro"
                 className="inline-block px-10 py-4 border border-white/30 text-white font-black text-sm tracking-widest uppercase hover:border-white hover:bg-white hover:text-black transition-all duration-300 mb-12"
               >
                 Shop Retro
@@ -73,7 +73,7 @@ export default function RetroCollection() {
                   transition={{ delay: i * 0.1 }}
                   className="group cursor-pointer"
                 >
-                  <Link href="/shop?category=retro">
+                  <Link href="/shop?version=retro">
                     <div className="relative aspect-square overflow-hidden bg-zinc-900 mb-2">
                       <Image
                         src={p.image}

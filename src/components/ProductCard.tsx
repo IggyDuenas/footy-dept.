@@ -58,7 +58,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-            {product.type === 'retro' && (
+            {product.version === 'retro' && (
               <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">Retro</span>
             )}
             {product.type === 'mystery' && (

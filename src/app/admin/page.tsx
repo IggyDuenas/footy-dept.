@@ -20,7 +20,6 @@ type Tab = 'products' | 'orders' | 'badges'
 const PRODUCT_TYPES = [
   { value: 'club',     label: 'Club' },
   { value: 'national', label: 'National Team' },
-  { value: 'retro',    label: 'Retro' },
   { value: 'mystery',  label: 'Mystery Box' },
 ]
 
@@ -149,7 +148,7 @@ export default function AdminPage() {
     if (productData.country === 'Other') productData.country = customCountry
     if (productData.type !== 'club') delete productData.league
     if (productData.league === 'Other') productData.league = customLeague
-    if (productData.type === 'retro' || productData.type === 'mystery') productData.version = 'fan'
+    if (productData.type === 'mystery') productData.version = 'fan'
     // Strip frontend-only fields
     delete productData.id
     delete (productData as Record<string, unknown>).available_badges
@@ -479,11 +478,12 @@ export default function AdminPage() {
                       <div>
                         <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Version</label>
                         <select value={ep.version || 'fan'}
-                          onChange={(e) => setEditingProduct({ ...ep, version: e.target.value as 'fan' | 'player' })}
+                          onChange={(e) => setEditingProduct({ ...ep, version: e.target.value as 'fan' | 'player' | 'retro' })}
                           className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
                         >
                           <option value="fan"    className="bg-[#111]">Fan</option>
                           <option value="player" className="bg-[#111]">Player</option>
+                          <option value="retro"  className="bg-[#111]">Retro</option>
                         </select>
                       </div>
                     )}

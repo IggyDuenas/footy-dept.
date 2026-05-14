@@ -25,7 +25,7 @@ const DEMO_PRODUCTS: Product[] = [
   },
   {
     id: '3', name: "Argentina '86 Retro", slug: 'argentina-86-retro',
-    type: 'retro', country: 'Argentina', version: 'fan', year: 1986,
+    type: 'national', country: 'Argentina', version: 'retro', year: 1986,
     description: 'Hand-of-God era classic.', price: 79.99,
     images: ['https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&q=80'],
     sizes: ['S','M','L','XL'], featured: true, inventory: 20, created_at: '',
@@ -46,7 +46,7 @@ const DEMO_PRODUCTS: Product[] = [
   },
   {
     id: '6', name: "Germany Classic '90 Retro", slug: 'germany-90-retro',
-    type: 'retro', country: 'Germany', version: 'fan', year: 1990,
+    type: 'national', country: 'Germany', version: 'retro', year: 1990,
     description: 'World Cup winners edition.', price: 74.99,
     images: ['https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=80'],
     sizes: ['S','M','L','XL'], featured: false, inventory: 15, created_at: '',

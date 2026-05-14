@@ -3,7 +3,7 @@ import Link from 'next/link'
 const links = {
   Shop: [
     { label: 'Clubs', href: '/shop?type=club' },
-    { label: 'Retro Collection', href: '/shop?type=retro' },
+    { label: 'Retro Collection', href: '/shop?version=retro' },
     { label: 'National Teams', href: '/shop?type=national' },
     { label: 'Mystery Box', href: '/shop?type=mystery' },
   ],

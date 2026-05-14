@@ -29,7 +29,7 @@ const collections = [
   {
     name: 'Retro Kits',
     tag: 'Classic Editions',
-    href: '/shop?type=retro',
+    href: '/shop?version=retro',
     image: '/images/collections/retrokits.png',
     color: 'from-stone-900/40',
   },
