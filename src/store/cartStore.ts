@@ -2,14 +2,23 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { CartItem, Product } from '@/types'
+import { Badge, CartItem, Product } from '@/types'
+
+interface AddItemOptions {
+  size: string
+  quantity?: number
+  customName?: string | null
+  customNumber?: number | null
+  selectedBadges?: Badge[]
+  customizationTotal?: number
+}
 
 interface CartStore {
   items: CartItem[]
   isOpen: boolean
-  addItem: (product: Product, size: string, quantity?: number) => void
-  removeItem: (productId: string, size: string) => void
-  updateQuantity: (productId: string, size: string, quantity: number) => void
+  addItem: (product: Product, options: AddItemOptions) => void
+  removeItem: (cartKey: string) => void
+  updateQuantity: (cartKey: string, quantity: number) => void
   clearCart: () => void
   openCart: () => void
   closeCart: () => void
@@ -18,68 +27,98 @@ interface CartStore {
   itemCount: () => number
 }
 
+function buildCartKey(
+  productId: string,
+  size: string,
+  customName?: string | null,
+  customNumber?: number | null,
+  selectedBadges?: Badge[]
+): string {
+  const badgeIds = (selectedBadges || []).map((b) => b.id).sort().join(',')
+  return `${productId}-${size}-${customName || ''}-${customNumber ?? ''}-${badgeIds}`
+}
+
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
       isOpen: false,
 
-      addItem: (product, size, quantity = 1) => {
+      addItem: (product, options) => {
+        const {
+          size,
+          quantity = 1,
+          customName,
+          customNumber,
+          selectedBadges,
+          customizationTotal,
+        } = options
+
+        const cartKey = buildCartKey(product.id, size, customName, customNumber, selectedBadges)
         const items = get().items
-        const existing = items.find(
-          (i) => i.product.id === product.id && i.size === size
-        )
+        const existing = items.find((i) => i.cartKey === cartKey)
+
         if (existing) {
           set({
             items: items.map((i) =>
-              i.product.id === product.id && i.size === size
-                ? { ...i, quantity: i.quantity + quantity }
-                : i
+              i.cartKey === cartKey ? { ...i, quantity: i.quantity + quantity } : i
             ),
           })
         } else {
-          set({ items: [...items, { product, size, quantity }] })
+          const newItem: CartItem = {
+            cartKey,
+            product,
+            size,
+            quantity,
+            customName: customName || undefined,
+            customNumber: customNumber ?? undefined,
+            selectedBadges: selectedBadges?.length ? selectedBadges : undefined,
+            customizationTotal: customizationTotal || undefined,
+          }
+          set({ items: [...items, newItem] })
         }
         set({ isOpen: true })
       },
 
-      removeItem: (productId, size) => {
-        set({
-          items: get().items.filter(
-            (i) => !(i.product.id === productId && i.size === size)
-          ),
-        })
+      removeItem: (cartKey) => {
+        set({ items: get().items.filter((i) => i.cartKey !== cartKey) })
       },
 
-      updateQuantity: (productId, size, quantity) => {
+      updateQuantity: (cartKey, quantity) => {
         if (quantity <= 0) {
-          get().removeItem(productId, size)
+          get().removeItem(cartKey)
           return
         }
         set({
           items: get().items.map((i) =>
-            i.product.id === productId && i.size === size
-              ? { ...i, quantity }
-              : i
+            i.cartKey === cartKey ? { ...i, quantity } : i
           ),
         })
       },
 
       clearCart: () => set({ items: [] }),
-      openCart: () => set({ isOpen: true }),
+      openCart:  () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set((s) => ({ isOpen: !s.isOpen })),
 
       total: () =>
         get().items.reduce(
-          (sum, i) => sum + i.product.price * i.quantity,
+          (sum, i) => sum + (i.product.price + (i.customizationTotal || 0)) * i.quantity,
           0
         ),
 
       itemCount: () =>
         get().items.reduce((sum, i) => sum + i.quantity, 0),
     }),
-    { name: 'footy-dept-cart' }
+    {
+      name: 'footy-dept-cart',
+      version: 1,
+      // Clears legacy cart items that lack cartKey (pre-customisation build)
+      migrate: (_state, version) => {
+        if (version === 0) return { items: [], isOpen: false }
+        return _state as CartStore
+      },
+    }
   )
 )
 

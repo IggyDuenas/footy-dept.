@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
     const supabase = createServerClient()
 
     try {
-      // Parse items from metadata
       const rawItems = session.metadata?.items
       if (!rawItems) throw new Error('No items metadata')
 
@@ -36,9 +35,17 @@ export async function POST(req: NextRequest) {
         quantity: number
         size: string
         unit_price: number
+        custom_name: string | null
+        custom_number: number | null
+        selected_badges: Array<{ badge_id: string; name: string; price: number }>
+        customization_total: number
       }> = JSON.parse(rawItems)
 
-      const shippingAddress = (session as Stripe.Checkout.Session & { shipping_details?: { address?: Stripe.Address } }).shipping_details?.address
+      const shippingAddress = (
+        session as Stripe.Checkout.Session & {
+          shipping_details?: { address?: Stripe.Address }
+        }
+      ).shipping_details?.address
 
       // Create order
       const { data: order, error: orderError } = await supabase
@@ -65,13 +72,17 @@ export async function POST(req: NextRequest) {
         throw new Error(`Order creation failed: ${orderError?.message}`)
       }
 
-      // Create order items
+      // Create order items with customization snapshots
       const orderItems = items.map((item) => ({
         order_id: order.id,
         product_id: item.product_id,
         quantity: item.quantity,
         size: item.size,
         unit_price: item.unit_price,
+        custom_name: item.custom_name || null,
+        custom_number: item.custom_number ?? null,
+        selected_badges: item.selected_badges || [],
+        customization_total: item.customization_total || 0,
       }))
 
       await supabase.from('order_items').insert(orderItems)

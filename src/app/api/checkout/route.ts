@@ -10,22 +10,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 })
     }
 
-    const lineItems = items.map((item) => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.product.name,
-          description: `Size: ${item.size}`,
-          images: item.product.images.slice(0, 1),
-          metadata: {
-            product_id: item.product.id,
-            slug: item.product.slug,
+    const lineItems = items.map((item) => {
+      // Build description with customization details
+      const descParts: string[] = [`Size: ${item.size}`]
+      if (item.customName || item.customNumber != null) {
+        descParts.push(`Name: ${item.customName || ''} ${item.customNumber ?? ''}`.trim())
+      }
+      if (item.selectedBadges && item.selectedBadges.length > 0) {
+        descParts.push(`Badges: ${item.selectedBadges.map((b) => b.name).join(', ')}`)
+      }
+
+      return {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: item.product.name,
+            description: descParts.join(' | '),
+            images: item.product.images.slice(0, 1),
+            metadata: {
+              product_id: item.product.id,
+              slug: item.product.slug,
+            },
           },
+          // Unit price includes customization add-on total
+          unit_amount: Math.round((item.product.price + (item.customizationTotal || 0)) * 100),
         },
-        unit_amount: Math.round(item.product.price * 100),
-      },
-      quantity: item.quantity,
-    }))
+        quantity: item.quantity,
+      }
+    })
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
@@ -62,6 +74,7 @@ export async function POST(req: NextRequest) {
           },
         },
       ],
+      // Snapshot all customization data so the webhook can persist it accurately
       metadata: {
         items: JSON.stringify(
           items.map((i) => ({
@@ -69,6 +82,11 @@ export async function POST(req: NextRequest) {
             quantity: i.quantity,
             size: i.size,
             unit_price: i.product.price,
+            custom_name: i.customName || null,
+            custom_number: i.customNumber ?? null,
+            // Badge snapshot: prices locked at order time so historical orders are stable
+            selected_badges: i.selectedBadges || [],
+            customization_total: i.customizationTotal || 0,
           }))
         ),
       },

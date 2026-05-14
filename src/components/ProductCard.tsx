@@ -24,7 +24,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     e.stopPropagation()
     setAdding(true)
     const defaultSize = product.sizes[1] || product.sizes[0] || 'M'
-    addItem(product, defaultSize)
+    addItem(product, { size: defaultSize })
     setTimeout(() => setAdding(false), 1000)
   }
 

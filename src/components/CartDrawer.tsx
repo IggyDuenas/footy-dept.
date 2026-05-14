@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/cartStore'
 
 export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, total } = useCartStore()
+
   const handleCheckout = async () => {
     if (items.length === 0) return
     try {
@@ -75,52 +76,78 @@ export default function CartDrawer() {
               ) : (
                 <div className="flex flex-col gap-5">
                   <AnimatePresence>
-                    {items.map((item) => (
-                      <motion.div
-                        key={`${item.product.id}-${item.size}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: 50 }}
-                        className="flex gap-4"
-                      >
-                        <div className="relative w-20 h-20 bg-white/5 rounded-lg overflow-hidden flex-shrink-0">
-                          <Image
-                            src={item.product.images[0] || '/placeholder.jpg'}
-                            alt={item.product.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-semibold text-sm truncate">{item.product.name}</p>
-                          <p className="text-white/40 text-xs mt-0.5">Size: {item.size}</p>
-                          <p className="text-blue-400 font-bold text-sm mt-1">
-                            ${(item.product.price * item.quantity).toFixed(2)}
-                          </p>
-                          <div className="flex items-center gap-3 mt-2">
-                            <button
-                              onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
-                              className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors"
-                            >
-                              <Minus size={12} />
-                            </button>
-                            <span className="text-white text-sm font-medium w-4 text-center">{item.quantity}</span>
-                            <button
-                              onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
-                              className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors"
-                            >
-                              <Plus size={12} />
-                            </button>
-                            <button
-                              onClick={() => removeItem(item.product.id, item.size)}
-                              className="ml-auto text-white/30 hover:text-red-400 transition-colors text-xs"
-                            >
-                              Remove
-                            </button>
+                    {items.map((item) => {
+                      const linePrice = (item.product.price + (item.customizationTotal || 0)) * item.quantity
+                      return (
+                        <motion.div
+                          key={item.cartKey}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: 50 }}
+                          className="flex gap-4"
+                        >
+                          <div className="relative w-20 h-20 bg-white/5 rounded-lg overflow-hidden flex-shrink-0">
+                            <Image
+                              src={item.product.images[0] || '/placeholder.jpg'}
+                              alt={item.product.name}
+                              fill
+                              className="object-cover"
+                            />
                           </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-semibold text-sm truncate">{item.product.name}</p>
+                            <p className="text-white/40 text-xs mt-0.5">Size: {item.size}</p>
+
+                            {/* Custom name/number */}
+                            {(item.customName || item.customNumber != null) && (
+                              <p className="text-white/40 text-xs mt-0.5">
+                                Name: {item.customName} {item.customNumber}
+                              </p>
+                            )}
+
+                            {/* Badge chips */}
+                            {item.selectedBadges && item.selectedBadges.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {item.selectedBadges.map((b) => (
+                                  <span
+                                    key={b.id}
+                                    className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 leading-none"
+                                  >
+                                    {b.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            <p className="text-blue-400 font-bold text-sm mt-1">
+                              ${linePrice.toFixed(2)}
+                            </p>
+
+                            <div className="flex items-center gap-3 mt-2">
+                              <button
+                                onClick={() => updateQuantity(item.cartKey, item.quantity - 1)}
+                                className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors"
+                              >
+                                <Minus size={12} />
+                              </button>
+                              <span className="text-white text-sm font-medium w-4 text-center">{item.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(item.cartKey, item.quantity + 1)}
+                                className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors"
+                              >
+                                <Plus size={12} />
+                              </button>
+                              <button
+                                onClick={() => removeItem(item.cartKey)}
+                                className="ml-auto text-white/30 hover:text-red-400 transition-colors text-xs"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )
+                    })}
                   </AnimatePresence>
                 </div>
               )}

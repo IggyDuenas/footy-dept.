@@ -1,31 +1,59 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { use } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldCheck, Truck, RotateCcw, ChevronDown, Heart } from 'lucide-react'
+import { ShieldCheck, Truck, RotateCcw, ChevronDown } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import CartDrawer from '@/components/CartDrawer'
 import SearchModal from '@/components/SearchModal'
 import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabase'
-import { Product } from '@/types'
-import { useCartStore, useWishlistStore } from '@/store/cartStore'
+import { Product, Badge } from '@/types'
+import { useCartStore } from '@/store/cartStore'
 import toast from 'react-hot-toast'
 
+// ─── Demo fallback ────────────────────────────────────────────────────────────
+
 const DEMO: Record<string, Product> = {
-  'brazil-home-2026':   { id:'1', name:'Brazil Home Jersey 2026', slug:'brazil-home-2026',   type:'national', country:'Brazil',  version:'fan', year:2026, description:'The iconic Seleção returns in full force. Crafted for the fanwear faithful — bold yellow, deep green, and a cut that moves with you.', price:89.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=900&q=80','https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=900&q=80'], sizes:['XS','S','M','L','XL','XXL'], featured:true, inventory:50, created_at:'' },
-  'france-away-2026':   { id:'2', name:'France Away Kit 2026',    slug:'france-away-2026',   type:'national', country:'France',  version:'fan', year:2026, description:'Les Bleus go clean. The 2026 away edition in stark white with signature blue trim — a modern classic.', price:94.99, compare_at_price:124.99, images:['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=900&q=80','https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=900&q=80'], sizes:['XS','S','M','L','XL','XXL'], featured:true, inventory:35, created_at:'' },
-  'mystery-box-premium':{ id:'4', name:'Mystery Box — Premium',   slug:'mystery-box-premium', type:'mystery',  country:'Various', version:'fan', year:2026, description:'You pick the size, we pick the kit. Could be a retro gem, a current national team, or a limited edition. Always premium, always a surprise.', price:59.99, compare_at_price:99.99, images:['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=900&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:100, created_at:'' },
+  'brazil-home-2026': {
+    id: '1', name: 'Brazil Home Jersey 2026', slug: 'brazil-home-2026',
+    type: 'national', country: 'Brazil', version: 'fan', year: 2026,
+    description: 'The iconic Seleção returns in full force. Crafted for the fanwear faithful — bold yellow, deep green, and a cut that moves with you.',
+    price: 89.99, compare_at_price: 119.99,
+    images: ['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=900&q=80', 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=900&q=80'],
+    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'], featured: true, inventory: 50, created_at: '',
+    customization_enabled: true, customization_price: 10, available_badges: [],
+  },
+  'france-away-2026': {
+    id: '2', name: 'France Away Kit 2026', slug: 'france-away-2026',
+    type: 'national', country: 'France', version: 'fan', year: 2026,
+    description: 'Les Bleus go clean. The 2026 away edition in stark white with signature blue trim — a modern classic.',
+    price: 94.99, compare_at_price: 124.99,
+    images: ['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=900&q=80', 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=900&q=80'],
+    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'], featured: true, inventory: 35, created_at: '',
+    customization_enabled: true, customization_price: 10, available_badges: [],
+  },
+  'mystery-box-premium': {
+    id: '4', name: 'Mystery Box — Premium', slug: 'mystery-box-premium',
+    type: 'mystery', country: 'Various', version: 'fan', year: 2026,
+    description: 'You pick the size, we pick the kit. Could be a retro gem, a current national team, or a limited edition. Always premium, always a surprise.',
+    price: 59.99, compare_at_price: 99.99,
+    images: ['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=900&q=80'],
+    sizes: ['S', 'M', 'L', 'XL'], featured: true, inventory: 100, created_at: '',
+    customization_enabled: false, customization_price: 10, available_badges: [],
+  },
 }
 
 const accordions = [
   { title: 'Size Guide', content: 'XS: 34-36", S: 36-38", M: 38-40", L: 40-42", XL: 42-44", XXL: 44-46". We recommend sizing up for a relaxed fit.' },
   { title: 'Shipping Info', content: 'Standard shipping 5-7 business days. Express 2-3 days. All orders are tracked and insured. Free shipping on orders over $100.' },
-  { title: 'Returns & FAQ', content: 'Unworn items can be returned within 30 days. Mystery boxes are final sale. Contact support for any sizing issues — we\'ll make it right.' },
+  { title: 'Returns & FAQ', content: "Unworn items can be returned within 30 days. Mystery boxes are final sale. Contact support for any sizing issues — we'll make it right." },
 ]
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
@@ -36,18 +64,47 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [quantity, setQuantity] = useState(1)
   const [openAccordion, setOpenAccordion] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
-  const { addItem } = useCartStore()
-  const { toggle, has } = useWishlistStore()
 
+  // Customization state
+  const [wantsCustomization, setWantsCustomization] = useState(false)
+  const [customName, setCustomName] = useState('')
+  const [customNumberStr, setCustomNumberStr] = useState('')
+  const [selectedBadges, setSelectedBadges] = useState<Badge[]>([])
+
+  const sizeGuideRef = useRef<HTMLDivElement>(null)
+  const { addItem } = useCartStore()
+
+  // ── Fetch product + its badges ─────────────────────────────────────────────
   useEffect(() => {
-    const fetch = async () => {
+    const fetchProduct = async () => {
       const { data } = await supabase.from('products').select('*').eq('slug', slug).single()
-      setProduct(data || DEMO[slug] || null)
+      let p: Product | null = data || DEMO[slug] || null
+
+      if (p) {
+        // Fetch available badges for this product
+        const { data: pb } = await supabase
+          .from('product_badges')
+          .select('badge_id')
+          .eq('product_id', p.id)
+
+        if (pb && pb.length > 0) {
+          const { data: badges } = await supabase
+            .from('badges')
+            .select('*')
+            .in('id', pb.map((r: { badge_id: string }) => r.badge_id))
+          p = { ...p, available_badges: badges || [] }
+        } else {
+          p = { ...p, available_badges: [] }
+        }
+      }
+
+      setProduct(p)
       setLoading(false)
     }
-    fetch()
+    fetchProduct()
   }, [slug])
 
+  // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading) {
     return (
       <main>
@@ -82,19 +139,65 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     )
   }
 
+  // ── Derived values ─────────────────────────────────────────────────────────
+  const discount = product.compare_at_price
+    ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
+    : null
+
+  const isCustomizable = product.customization_enabled === true
+  const customizationFee = product.customization_price ?? 10
+
+  const customizationTotal = (() => {
+    let total = 0
+    if (isCustomizable && wantsCustomization) total += customizationFee
+    selectedBadges.forEach((b) => { total += b.price })
+    return total
+  })()
+
+  const lineTotal = (product.price + customizationTotal) * quantity
+
+  const outOfStock = product.inventory === 0
+
+  const toggleBadge = (badge: Badge) => {
+    setSelectedBadges((prev) =>
+      prev.some((b) => b.id === badge.id)
+        ? prev.filter((b) => b.id !== badge.id)
+        : [...prev, badge]
+    )
+  }
+
+  const handleSizeGuide = () => {
+    setOpenAccordion('Size Guide')
+    setTimeout(() => sizeGuideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+  }
+
   const handleAddToCart = () => {
     if (!selectedSize) {
       toast.error('Please select a size')
       return
     }
-    addItem(product, selectedSize, quantity)
+    if (isCustomizable && wantsCustomization) {
+      if (!customName.trim()) {
+        toast.error('Please enter a name for your kit')
+        return
+      }
+      if (customNumberStr === '') {
+        toast.error('Please enter a number for your kit')
+        return
+      }
+    }
+    addItem(product, {
+      size: selectedSize,
+      quantity,
+      customName: isCustomizable && wantsCustomization ? customName.trim() : null,
+      customNumber: isCustomizable && wantsCustomization ? parseInt(customNumberStr) : null,
+      selectedBadges: selectedBadges.length ? selectedBadges : undefined,
+      customizationTotal: customizationTotal || undefined,
+    })
     toast.success(`${product.name} added to cart`)
   }
 
-  const discount = product.compare_at_price
-    ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
-    : null
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <main>
       <Navbar onSearchOpen={() => setSearchOpen(true)} />
@@ -113,7 +216,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
-            {/* LEFT — Image gallery */}
+
+            {/* LEFT — Image gallery (no wishlist button) */}
             <div>
               <div className="relative aspect-square overflow-hidden bg-zinc-900 mb-4 group">
                 <AnimatePresence mode="wait">
@@ -139,15 +243,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                     -{discount}% OFF
                   </div>
                 )}
-                <button
-                  onClick={() => toggle(product.id)}
-                  className="absolute top-4 right-4 w-10 h-10 bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/80 transition-colors"
-                >
-                  <Heart
-                    size={16}
-                    className={has(product.id) ? 'fill-red-500 text-red-500' : 'text-white'}
-                  />
-                </button>
               </div>
 
               {/* Thumbnails */}
@@ -178,13 +273,22 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               </h1>
 
               {/* Price */}
-              <div className="flex items-center gap-4 mb-6">
-                <span className="text-3xl font-black text-white">${product.price.toFixed(2)}</span>
-                {product.compare_at_price && (
-                  <span className="text-white/30 text-xl line-through">${product.compare_at_price.toFixed(2)}</span>
-                )}
-                {discount && (
-                  <span className="text-blue-400 text-sm font-bold">Save ${(product.compare_at_price! - product.price).toFixed(2)}</span>
+              <div className="mb-6">
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl font-black text-white">${product.price.toFixed(2)}</span>
+                  {product.compare_at_price && (
+                    <span className="text-white/30 text-xl line-through">${product.compare_at_price.toFixed(2)}</span>
+                  )}
+                  {discount && (
+                    <span className="text-blue-400 text-sm font-bold">
+                      Save ${(product.compare_at_price! - product.price).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+                {customizationTotal > 0 && (
+                  <p className="text-white/40 text-sm mt-1">
+                    + ${customizationTotal.toFixed(2)} customizations
+                  </p>
                 )}
               </div>
 
@@ -195,19 +299,26 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-white text-sm font-semibold tracking-wider uppercase">Size</p>
                   <button
-                    onClick={() => setOpenAccordion(openAccordion === 'Size Guide' ? null : 'Size Guide')}
+                    onClick={handleSizeGuide}
                     className="text-white/40 text-xs hover:text-white/60 underline underline-offset-2"
                   >
                     Size Guide
                   </button>
                 </div>
+                {outOfStock && (
+                  <p className="text-red-400 text-xs tracking-wider uppercase mb-3">Out of stock</p>
+                )}
+                {/* TODO: per-size inventory not yet implemented; product.inventory used as proxy */}
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map((size) => (
                     <button
                       key={size}
-                      onClick={() => setSelectedSize(size)}
+                      onClick={() => !outOfStock && setSelectedSize(size)}
+                      disabled={outOfStock}
                       className={`min-w-[52px] h-11 border text-sm font-semibold transition-all duration-200 ${
-                        selectedSize === size
+                        outOfStock
+                          ? 'border-white/10 text-white/20 cursor-not-allowed line-through'
+                          : selectedSize === size
                           ? 'border-white bg-white text-black'
                           : 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'
                       }`}
@@ -217,6 +328,129 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                   ))}
                 </div>
               </div>
+
+              {/* ── Customization section ─────────────────────────────────── */}
+              {isCustomizable && (
+                <div className="mb-6 border border-white/10 p-5">
+                  <p className="text-white text-sm font-black tracking-widest uppercase mb-4">
+                    Customize Your Kit
+                  </p>
+
+                  {/* Toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer mb-4">
+                    <div
+                      onClick={() => {
+                        setWantsCustomization((v) => !v)
+                        if (wantsCustomization) { setCustomName(''); setCustomNumberStr('') }
+                      }}
+                      className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
+                        wantsCustomization ? 'bg-blue-500' : 'bg-white/10'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full mt-0.5 transition-transform ${
+                        wantsCustomization ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                    <span className="text-white/70 text-sm">
+                      Add name &amp; number{' '}
+                      <span className="text-blue-400 font-bold">+${customizationFee.toFixed(2)}</span>
+                    </span>
+                  </label>
+
+                  {/* Name + Number inputs */}
+                  <AnimatePresence>
+                    {wantsCustomization && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                          <div>
+                            <label className="block text-white/40 text-[10px] tracking-widest uppercase mb-2">
+                              Name (max 12)
+                            </label>
+                            <input
+                              type="text"
+                              value={customName}
+                              onChange={(e) =>
+                                setCustomName(
+                                  e.target.value.replace(/[^A-Za-z ]/g, '').toUpperCase().slice(0, 12)
+                                )
+                              }
+                              placeholder="SILVA"
+                              className="w-full bg-white/5 border border-white/20 text-white px-4 py-3 text-sm outline-none focus:border-blue-400 tracking-widest uppercase placeholder:text-white/20 placeholder:normal-case placeholder:tracking-normal"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-white/40 text-[10px] tracking-widest uppercase mb-2">
+                              Number (0–99)
+                            </label>
+                            <input
+                              type="number"
+                              value={customNumberStr}
+                              onChange={(e) => {
+                                const v = e.target.value
+                                if (v === '' || (Number(v) >= 0 && Number(v) <= 99)) {
+                                  setCustomNumberStr(v)
+                                }
+                              }}
+                              placeholder="10"
+                              min={0}
+                              max={99}
+                              className="w-full bg-white/5 border border-white/20 text-white px-4 py-3 text-sm outline-none focus:border-blue-400 placeholder:text-white/20"
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* ── Badges section ────────────────────────────────────────── */}
+              {product.available_badges && product.available_badges.length > 0 && (
+                <div className="mb-6">
+                  <p className="text-white text-sm font-black tracking-widest uppercase mb-3">Add Badges</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {product.available_badges.map((badge) => {
+                      const isSelected = selectedBadges.some((b) => b.id === badge.id)
+                      return (
+                        <button
+                          key={badge.id}
+                          onClick={() => toggleBadge(badge)}
+                          className={`border p-3 text-left transition-all duration-200 ${
+                            isSelected
+                              ? 'border-blue-400 bg-blue-500/10'
+                              : 'border-white/20 hover:border-white/40'
+                          }`}
+                        >
+                          <div className="relative aspect-square bg-zinc-900 mb-2 overflow-hidden">
+                            <Image
+                              src={badge.image_url}
+                              alt={badge.name}
+                              fill
+                              className="object-contain p-2"
+                            />
+                          </div>
+                          <p className="text-white text-xs font-semibold leading-tight truncate">{badge.name}</p>
+                          <p className="text-blue-400 text-xs font-bold mt-0.5">+${badge.price.toFixed(2)}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {selectedBadges.length > 0 && (
+                    <p className="text-white/40 text-xs mt-3 tracking-wider">
+                      Badges:{' '}
+                      <span className="text-white">
+                        +${selectedBadges.reduce((s, b) => s + b.price, 0).toFixed(2)}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Quantity */}
               <div className="mb-8">
@@ -244,9 +478,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               <motion.button
                 whileTap={{ scale: 0.98 }}
                 onClick={handleAddToCart}
-                className="w-full py-5 bg-white text-black font-black text-sm tracking-widest uppercase hover:bg-blue-500 hover:text-white transition-colors duration-300 mb-4"
+                disabled={outOfStock}
+                className="w-full py-5 bg-white text-black font-black text-sm tracking-widest uppercase hover:bg-blue-500 hover:text-white transition-colors duration-300 mb-4 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Add to Cart — ${(product.price * quantity).toFixed(2)}
+                {outOfStock ? 'Out of Stock' : `Add to Cart — $${lineTotal.toFixed(2)}`}
               </motion.button>
 
               {/* Trust badges */}
@@ -266,7 +501,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               {/* Accordions */}
               <div className="space-y-0">
                 {accordions.map((acc) => (
-                  <div key={acc.title} className="border-b border-white/10">
+                  <div
+                    key={acc.title}
+                    className="border-b border-white/10"
+                    ref={acc.title === 'Size Guide' ? sizeGuideRef : undefined}
+                  >
                     <button
                       onClick={() => setOpenAccordion(openAccordion === acc.title ? null : acc.title)}
                       className="w-full flex items-center justify-between py-4 text-white/70 hover:text-white transition-colors"

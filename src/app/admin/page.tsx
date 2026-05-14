@@ -5,15 +5,15 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import {
   Package, ShoppingBag, TrendingUp, Eye, EyeOff, Plus,
-  Edit, Trash2, Check, X, LogOut
+  Edit, Trash2, Check, X, LogOut, Tag,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { Product, Order } from '@/types'
+import { Badge, Product, Order } from '@/types'
 import toast from 'react-hot-toast'
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'footydept2026'
 
-type Tab = 'products' | 'orders'
+type Tab = 'products' | 'orders' | 'badges'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -41,7 +41,10 @@ const EMPTY_PRODUCT: Partial<Product> = {
   version: 'fan', year: 2026, description: '', price: 0,
   compare_at_price: undefined, images: [''], sizes: ['S', 'M', 'L', 'XL'],
   featured: false, supplier_link: '', inventory: 0,
+  customization_enabled: false, customization_price: 10,
 }
+
+const EMPTY_BADGE: Partial<Badge> = { name: '', image_url: '', price: 0 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -50,6 +53,8 @@ export default function AdminPage() {
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [tab, setTab] = useState<Tab>('products')
+
+  // Products state
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
@@ -58,6 +63,14 @@ export default function AdminPage() {
   const [uploading, setUploading] = useState(false)
   const [customCountry, setCustomCountry] = useState('')
   const [customLeague, setCustomLeague] = useState('')
+  const [productBadgeIds, setProductBadgeIds] = useState<Set<string>>(new Set())
+
+  // Badges state
+  const [allBadges, setAllBadges] = useState<Badge[]>([])
+  const [editingBadge, setEditingBadge] = useState<Partial<Badge> | null>(null)
+  const [showBadgeForm, setShowBadgeForm] = useState(false)
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,22 +82,56 @@ export default function AdminPage() {
     }
   }
 
+  // ── Data fetching ──────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (!authed) return
     fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, tab])
 
+  // Keep allBadges loaded for the product form badge multi-select
+  useEffect(() => {
+    if (!authed) return
+    supabase.from('badges').select('*').order('name').then(({ data }) => setAllBadges(data || []))
+  }, [authed])
+
   const fetchData = async () => {
     setLoading(true)
     if (tab === 'products') {
       const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
       setProducts(data || [])
-    } else {
+    } else if (tab === 'orders') {
       const { data } = await supabase.from('orders').select('*, order_items(*, product:products(name))').order('created_at', { ascending: false })
       setOrders(data || [])
+    } else if (tab === 'badges') {
+      const { data } = await supabase.from('badges').select('*').order('name')
+      setAllBadges(data || [])
     }
     setLoading(false)
+  }
+
+  // ── Product CRUD ───────────────────────────────────────────────────────────
+
+  const openNewForm = () => {
+    setEditingProduct({ ...EMPTY_PRODUCT })
+    setCustomCountry('')
+    setCustomLeague('')
+    setProductBadgeIds(new Set())
+    setShowForm(true)
+  }
+
+  const openEditForm = async (p: Product) => {
+    setEditingProduct(p)
+    setCustomCountry(COUNTRIES.includes(p.country) ? '' : p.country)
+    setCustomLeague(p.league && LEAGUES.includes(p.league) ? '' : (p.league ?? ''))
+    setShowForm(true)
+    // Load this product's existing badge associations
+    const { data: pb } = await supabase
+      .from('product_badges')
+      .select('badge_id')
+      .eq('product_id', p.id)
+    setProductBadgeIds(new Set(pb?.map((r: { badge_id: string }) => r.badge_id) || []))
   }
 
   const handleSaveProduct = async () => {
@@ -98,24 +145,44 @@ export default function AdminPage() {
     }
 
     const productData = { ...editingProduct }
-    // Apply custom country / league overrides if "Other" was selected
+    // Apply "Other" overrides
     if (productData.country === 'Other') productData.country = customCountry
     if (productData.type !== 'club') delete productData.league
     if (productData.league === 'Other') productData.league = customLeague
     if (productData.type === 'retro' || productData.type === 'mystery') productData.version = 'fan'
+    // Strip frontend-only fields
     delete productData.id
+    delete (productData as Record<string, unknown>).available_badges
+
+    let savedProductId: string
 
     if (editingProduct.id) {
       const { error } = await supabase.from('products').update(productData).eq('id', editingProduct.id)
       if (error) { toast.error('Failed to update'); return }
       toast.success('Product updated')
+      savedProductId = editingProduct.id
     } else {
-      const { error } = await supabase.from('products').insert(productData)
-      if (error) { toast.error('Failed to create'); return }
+      const { data: created, error } = await supabase
+        .from('products')
+        .insert(productData)
+        .select('id')
+        .single()
+      if (error || !created) { toast.error('Failed to create'); return }
       toast.success('Product created')
+      savedProductId = created.id
     }
+
+    // Sync product_badges join table
+    await supabase.from('product_badges').delete().eq('product_id', savedProductId)
+    if (productBadgeIds.size > 0) {
+      await supabase.from('product_badges').insert(
+        Array.from(productBadgeIds).map((badge_id) => ({ product_id: savedProductId, badge_id }))
+      )
+    }
+
     setShowForm(false)
     setEditingProduct(null)
+    setProductBadgeIds(new Set())
     setCustomCountry('')
     setCustomLeague('')
     fetchData()
@@ -144,26 +211,58 @@ export default function AdminPage() {
       if (uploadError) { toast.error('Upload failed: ' + uploadError.message); return }
       const { data } = supabase.storage.from('product-images').getPublicUrl(fileName)
       setEditingProduct({ ...editingProduct, images: [data.publicUrl] })
-      toast.success('Image uploaded successfully')
+      toast.success('Image uploaded')
     } catch (error) {
-      toast.error('Upload error: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      toast.error('Upload error: ' + (error instanceof Error ? error.message : 'Unknown'))
     } finally {
       setUploading(false)
     }
   }
 
-  const openNewForm = () => {
-    setEditingProduct({ ...EMPTY_PRODUCT })
-    setCustomCountry('')
-    setCustomLeague('')
-    setShowForm(true)
+  // ── Badge CRUD ─────────────────────────────────────────────────────────────
+
+  const openNewBadgeForm = () => {
+    setEditingBadge({ ...EMPTY_BADGE })
+    setShowBadgeForm(true)
   }
 
-  const openEditForm = (p: Product) => {
-    setEditingProduct(p)
-    setCustomCountry(COUNTRIES.includes(p.country) ? '' : p.country)
-    setCustomLeague(p.league && LEAGUES.includes(p.league) ? '' : (p.league ?? ''))
-    setShowForm(true)
+  const openEditBadge = (badge: Badge) => {
+    setEditingBadge({ ...badge })
+    setShowBadgeForm(true)
+  }
+
+  const handleSaveBadge = async () => {
+    if (!editingBadge?.name || !editingBadge.image_url) {
+      toast.error('Name and image URL are required')
+      return
+    }
+    const badgeData = {
+      name: editingBadge.name,
+      image_url: editingBadge.image_url,
+      price: editingBadge.price ?? 0,
+    }
+    if (editingBadge.id) {
+      const { error } = await supabase.from('badges').update(badgeData).eq('id', editingBadge.id)
+      if (error) { toast.error('Failed to update badge'); return }
+      toast.success('Badge updated')
+    } else {
+      const { error } = await supabase.from('badges').insert(badgeData)
+      if (error) { toast.error('Failed to create badge'); return }
+      toast.success('Badge created')
+    }
+    setShowBadgeForm(false)
+    setEditingBadge(null)
+    // Refresh both badge list and allBadges (used in product form)
+    supabase.from('badges').select('*').order('name').then(({ data }) => setAllBadges(data || []))
+    fetchData()
+  }
+
+  const handleDeleteBadge = async (id: string) => {
+    if (!confirm('Delete this badge? It will be removed from all products it is attached to.')) return
+    await supabase.from('badges').delete().eq('id', id)
+    toast.success('Badge deleted')
+    supabase.from('badges').select('*').order('name').then(({ data }) => setAllBadges(data || []))
+    fetchData()
   }
 
   // ── Login screen ───────────────────────────────────────────────────────────
@@ -178,7 +277,6 @@ export default function AdminPage() {
         >
           <p className="font-black text-2xl tracking-widest text-white uppercase mb-1">Footy Dept.</p>
           <p className="text-white/30 text-xs tracking-widest uppercase mb-10">Admin Access</p>
-
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
               <input
@@ -236,10 +334,10 @@ export default function AdminPage() {
       <div className="max-w-[1400px] mx-auto px-6 py-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total Products', value: products.length.toString(), icon: Package },
-            { label: 'Total Orders',   value: orders.length.toString(),   icon: ShoppingBag },
+            { label: 'Total Products', value: products.length.toString(),    icon: Package },
+            { label: 'Total Orders',   value: orders.length.toString(),      icon: ShoppingBag },
             { label: 'Revenue',        value: `$${orders.reduce((s, o) => s + o.total_price, 0).toFixed(2)}`, icon: TrendingUp },
-            { label: 'Pending',        value: orders.filter((o) => o.status === 'pending').length.toString(), icon: Package },
+            { label: 'Badges',         value: allBadges.length.toString(),   icon: Tag },
           ].map((stat) => (
             <div key={stat.label} className="bg-black border border-white/10 p-5">
               <stat.icon size={18} className="text-blue-400 mb-3" />
@@ -251,7 +349,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-0 border-b border-white/10 mb-8">
-          {(['products', 'orders'] as Tab[]).map((t) => (
+          {(['products', 'orders', 'badges'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -300,34 +398,22 @@ export default function AdminPage() {
                     {/* Name */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Name</label>
-                      <input
-                        type="text"
-                        value={ep.name || ''}
-                        onChange={(e) => setEditingProduct({ ...ep, name: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                      />
+                      <input type="text" value={ep.name || ''} onChange={(e) => setEditingProduct({ ...ep, name: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
                     {/* Slug */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Slug</label>
-                      <input
-                        type="text"
-                        value={ep.slug || ''}
-                        onChange={(e) => setEditingProduct({ ...ep, slug: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                      />
+                      <input type="text" value={ep.slug || ''} onChange={(e) => setEditingProduct({ ...ep, slug: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
                     {/* Type */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Type</label>
-                      <select
-                        value={ep.type || 'national'}
-                        onChange={(e) => {
-                          const t = e.target.value as Product['type']
-                          setEditingProduct({ ...ep, type: t, league: undefined, version: 'fan' })
-                        }}
+                      <select value={ep.type || 'national'}
+                        onChange={(e) => setEditingProduct({ ...ep, type: e.target.value as Product['type'], league: undefined, version: 'fan' })}
                         className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
                       >
                         {PRODUCT_TYPES.map(({ value, label }) => (
@@ -347,18 +433,12 @@ export default function AdminPage() {
                         }}
                         className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
                       >
-                        {COUNTRIES.map((c) => (
-                          <option key={c} value={c} className="bg-[#111]">{c}</option>
-                        ))}
+                        {COUNTRIES.map((c) => <option key={c} value={c} className="bg-[#111]">{c}</option>)}
                       </select>
                       {ep.country === 'Other' && (
-                        <input
-                          type="text"
-                          placeholder="Enter country name"
-                          value={customCountry}
+                        <input type="text" placeholder="Enter country name" value={customCountry}
                           onChange={(e) => setCustomCountry(e.target.value)}
-                          className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                        />
+                          className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                       )}
                     </div>
 
@@ -375,19 +455,13 @@ export default function AdminPage() {
                           className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
                         >
                           <option value="" className="bg-[#111]">Select league…</option>
-                          {LEAGUES.map((l) => (
-                            <option key={l} value={l} className="bg-[#111]">{l}</option>
-                          ))}
+                          {LEAGUES.map((l) => <option key={l} value={l} className="bg-[#111]">{l}</option>)}
                           <option value="Other" className="bg-[#111]">Other</option>
                         </select>
                         {ep.league === 'Other' && (
-                          <input
-                            type="text"
-                            placeholder="Enter league name"
-                            value={customLeague}
+                          <input type="text" placeholder="Enter league name" value={customLeague}
                             onChange={(e) => setCustomLeague(e.target.value)}
-                            className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                          />
+                            className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                         )}
                       </div>
                     )}
@@ -395,22 +469,16 @@ export default function AdminPage() {
                     {/* Year */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Year</label>
-                      <input
-                        type="number"
-                        min={1900}
-                        max={2100}
-                        value={ep.year || 2026}
+                      <input type="number" min={1900} max={2100} value={ep.year || 2026}
                         onChange={(e) => setEditingProduct({ ...ep, year: parseInt(e.target.value) || 2026 })}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                      />
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
                     {/* Version — only for club or national */}
                     {showVersion && (
                       <div>
                         <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Version</label>
-                        <select
-                          value={ep.version || 'fan'}
+                        <select value={ep.version || 'fan'}
                           onChange={(e) => setEditingProduct({ ...ep, version: e.target.value as 'fan' | 'player' })}
                           className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
                         >
@@ -423,58 +491,43 @@ export default function AdminPage() {
                     {/* Price */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Price</label>
-                      <input
-                        type="number"
-                        value={ep.price || 0}
+                      <input type="number" value={ep.price || 0}
                         onChange={(e) => setEditingProduct({ ...ep, price: parseFloat(e.target.value) || 0 })}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                      />
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
                     {/* Compare price */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Compare Price</label>
-                      <input
-                        type="number"
-                        value={ep.compare_at_price || ''}
+                      <input type="number" value={ep.compare_at_price || ''}
                         onChange={(e) => setEditingProduct({ ...ep, compare_at_price: parseFloat(e.target.value) || undefined })}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                      />
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
                     {/* Inventory */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Inventory</label>
-                      <input
-                        type="number"
-                        value={ep.inventory || 0}
+                      <input type="number" value={ep.inventory || 0}
                         onChange={(e) => setEditingProduct({ ...ep, inventory: parseInt(e.target.value) || 0 })}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                      />
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
                     {/* Description */}
                     <div className="col-span-2">
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Description</label>
-                      <textarea
-                        value={ep.description || ''}
+                      <textarea value={ep.description || ''} rows={3}
                         onChange={(e) => setEditingProduct({ ...ep, description: e.target.value })}
-                        rows={3}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30 resize-none"
-                      />
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30 resize-none" />
                     </div>
 
-                    {/* Product image upload */}
+                    {/* Image upload */}
                     <div className="col-span-2">
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Product Image</label>
                       <div className="space-y-3">
-                        <input
-                          type="file"
-                          accept="image/*"
+                        <input type="file" accept="image/*"
                           onChange={(e) => e.target.files && handleImageUpload(e.target.files[0])}
                           disabled={uploading}
-                          className="w-full bg-white/5 border border-white/10 text-white/60 px-4 py-3 text-sm file:bg-blue-600 file:text-white file:border-0 file:px-3 file:py-1 file:text-xs file:font-semibold file:cursor-pointer disabled:opacity-50"
-                        />
+                          className="w-full bg-white/5 border border-white/10 text-white/60 px-4 py-3 text-sm file:bg-blue-600 file:text-white file:border-0 file:px-3 file:py-1 file:text-xs file:font-semibold file:cursor-pointer disabled:opacity-50" />
                         {uploading && <p className="text-blue-400 text-sm">Uploading...</p>}
                         {ep.images?.[0] && (
                           <div className="relative w-full h-32 bg-white/5 border border-white/10">
@@ -489,40 +542,88 @@ export default function AdminPage() {
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">
                         Supplier Link <span className="text-red-400">(Private — never displayed publicly)</span>
                       </label>
-                      <input
-                        type="text"
-                        value={ep.supplier_link || ''}
+                      <input type="text" value={ep.supplier_link || ''}
                         onChange={(e) => setEditingProduct({ ...ep, supplier_link: e.target.value })}
                         placeholder="https://supplier.com/product/..."
-                        className="w-full bg-red-950/20 border border-red-500/20 text-white px-4 py-3 text-sm outline-none focus:border-red-500/40"
-                      />
+                        className="w-full bg-red-950/20 border border-red-500/20 text-white px-4 py-3 text-sm outline-none focus:border-red-500/40" />
                     </div>
 
                     {/* Featured toggle */}
                     <div className="col-span-2">
                       <label className="flex items-center gap-3 cursor-pointer">
-                        <div
-                          onClick={() => setEditingProduct({ ...ep, featured: !ep.featured })}
-                          className={`w-10 h-5 rounded-full transition-colors ${ep.featured ? 'bg-blue-500' : 'bg-white/10'}`}
-                        >
+                        <div onClick={() => setEditingProduct({ ...ep, featured: !ep.featured })}
+                          className={`w-10 h-5 rounded-full transition-colors ${ep.featured ? 'bg-blue-500' : 'bg-white/10'}`}>
                           <div className={`w-4 h-4 bg-white rounded-full mt-0.5 transition-transform ${ep.featured ? 'translate-x-5' : 'translate-x-0.5'}`} />
                         </div>
                         <span className="text-white/60 text-sm">Featured product</span>
                       </label>
                     </div>
+
+                    {/* ── Customization ─────────────────────────────────── */}
+                    <div className="col-span-2 border-t border-white/10 pt-4">
+                      <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Customization</p>
+                      <label className="flex items-center gap-3 cursor-pointer mb-3">
+                        <div
+                          onClick={() => setEditingProduct({ ...ep, customization_enabled: !ep.customization_enabled })}
+                          className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 ${ep.customization_enabled ? 'bg-blue-500' : 'bg-white/10'}`}
+                        >
+                          <div className={`w-4 h-4 bg-white rounded-full mt-0.5 transition-transform ${ep.customization_enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        </div>
+                        <span className="text-white/60 text-sm">Enable customization (name &amp; number)</span>
+                      </label>
+                      {ep.customization_enabled && (
+                        <div className="w-48">
+                          <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Customization fee ($)</label>
+                          <input type="number" step="0.01" min="0"
+                            value={ep.customization_price ?? 10}
+                            onChange={(e) => setEditingProduct({ ...ep, customization_price: parseFloat(e.target.value) || 10 })}
+                            className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Badge multi-select ────────────────────────────── */}
+                    {allBadges.length > 0 && (
+                      <div className="col-span-2 border-t border-white/10 pt-4">
+                        <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Available Badges</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {allBadges.map((badge) => {
+                            const checked = productBadgeIds.has(badge.id)
+                            return (
+                              <button
+                                key={badge.id}
+                                type="button"
+                                onClick={() => {
+                                  const next = new Set(productBadgeIds)
+                                  if (checked) next.delete(badge.id)
+                                  else next.add(badge.id)
+                                  setProductBadgeIds(next)
+                                }}
+                                className={`flex items-center gap-2 p-2 border text-left transition-colors ${
+                                  checked ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 hover:border-white/30'
+                                }`}
+                              >
+                                <div className="relative w-8 h-8 bg-zinc-900 flex-shrink-0 overflow-hidden">
+                                  <Image src={badge.image_url} alt={badge.name} fill className="object-contain p-0.5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-white text-xs font-medium truncate">{badge.name}</p>
+                                  <p className="text-white/40 text-xs">${badge.price.toFixed(2)}</p>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-3 mt-6">
-                    <button
-                      onClick={handleSaveProduct}
-                      className="flex items-center gap-2 bg-white text-black font-black text-xs tracking-widest uppercase px-6 py-3 hover:bg-blue-500 hover:text-white transition-colors"
-                    >
+                    <button onClick={handleSaveProduct}
+                      className="flex items-center gap-2 bg-white text-black font-black text-xs tracking-widest uppercase px-6 py-3 hover:bg-blue-500 hover:text-white transition-colors">
                       <Check size={14} /> Save Product
                     </button>
-                    <button
-                      onClick={() => setShowForm(false)}
-                      className="text-white/40 hover:text-white text-sm transition-colors"
-                    >
+                    <button onClick={() => setShowForm(false)} className="text-white/40 hover:text-white text-sm transition-colors">
                       Cancel
                     </button>
                   </div>
@@ -533,9 +634,7 @@ export default function AdminPage() {
             {/* Product table */}
             {loading ? (
               <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-16 bg-white/5 animate-pulse" />
-                ))}
+                {[1, 2, 3, 4].map((i) => <div key={i} className="h-16 bg-white/5 animate-pulse" />)}
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-16 border border-white/10">
@@ -585,16 +684,10 @@ export default function AdminPage() {
                         </td>
                         <td className="py-4">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => openEditForm(p)}
-                              className="text-white/40 hover:text-white transition-colors"
-                            >
+                            <button onClick={() => openEditForm(p)} className="text-white/40 hover:text-white transition-colors">
                               <Edit size={14} />
                             </button>
-                            <button
-                              onClick={() => handleDeleteProduct(p.id)}
-                              className="text-white/40 hover:text-red-400 transition-colors"
-                            >
+                            <button onClick={() => handleDeleteProduct(p.id)} className="text-white/40 hover:text-red-400 transition-colors">
                               <Trash2 size={14} />
                             </button>
                           </div>
@@ -637,8 +730,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 mt-4">
-                      <select
-                        value={order.status}
+                      <select value={order.status}
                         onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
                         className="bg-white/5 border border-white/10 text-white text-xs px-3 py-2 outline-none"
                       >
@@ -655,6 +747,114 @@ export default function AdminPage() {
                       }`}>
                         {order.status}
                       </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── BADGES TAB ───────────────────────────────────────────────────── */}
+        {tab === 'badges' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-white font-black text-2xl uppercase">Badge Library</h2>
+              <button
+                onClick={openNewBadgeForm}
+                className="flex items-center gap-2 bg-white text-black font-black text-xs tracking-widest uppercase px-5 py-3 hover:bg-blue-500 hover:text-white transition-colors"
+              >
+                <Plus size={14} /> Add Badge
+              </button>
+            </div>
+
+            {/* Badge form modal */}
+            {showBadgeForm && editingBadge && (
+              <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-[#111] border border-white/10 w-full max-w-md p-8"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-white font-black text-xl uppercase">
+                      {editingBadge.id ? 'Edit Badge' : 'Add Badge'}
+                    </h3>
+                    <button onClick={() => setShowBadgeForm(false)} className="text-white/40 hover:text-white">
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Badge Name</label>
+                      <input type="text" value={editingBadge.name || ''}
+                        onChange={(e) => setEditingBadge({ ...editingBadge, name: e.target.value })}
+                        placeholder="Champions League Winner"
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
+                    </div>
+
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Image URL</label>
+                      <input type="text" value={editingBadge.image_url || ''}
+                        onChange={(e) => setEditingBadge({ ...editingBadge, image_url: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
+                      {editingBadge.image_url && (
+                        <div className="relative w-16 h-16 bg-zinc-900 mt-2 overflow-hidden">
+                          <Image src={editingBadge.image_url} alt="preview" fill className="object-contain p-1" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Price ($)</label>
+                      <input type="number" step="0.01" min="0"
+                        value={editingBadge.price ?? 0}
+                        onChange={(e) => setEditingBadge({ ...editingBadge, price: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button onClick={handleSaveBadge}
+                      className="flex items-center gap-2 bg-white text-black font-black text-xs tracking-widest uppercase px-6 py-3 hover:bg-blue-500 hover:text-white transition-colors">
+                      <Check size={14} /> Save Badge
+                    </button>
+                    <button onClick={() => setShowBadgeForm(false)} className="text-white/40 hover:text-white text-sm transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+
+            {/* Badge grid */}
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => <div key={i} className="aspect-square bg-white/5 animate-pulse" />)}
+              </div>
+            ) : allBadges.length === 0 ? (
+              <div className="text-center py-16 border border-white/10">
+                <Tag size={32} className="text-white/20 mx-auto mb-3" />
+                <p className="text-white/30">No badges yet. Add your first badge.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {allBadges.map((badge) => (
+                  <div key={badge.id} className="bg-black border border-white/10 p-4 hover:border-white/20 transition-colors">
+                    <div className="relative aspect-square bg-zinc-900 mb-3 overflow-hidden">
+                      <Image src={badge.image_url} alt={badge.name} fill className="object-contain p-3" />
+                    </div>
+                    <p className="text-white font-semibold text-sm leading-tight">{badge.name}</p>
+                    <p className="text-blue-400 text-xs font-bold mt-0.5">${badge.price.toFixed(2)}</p>
+                    <div className="flex items-center gap-3 mt-3">
+                      <button onClick={() => openEditBadge(badge)} className="text-white/40 hover:text-white transition-colors">
+                        <Edit size={14} />
+                      </button>
+                      <button onClick={() => handleDeleteBadge(badge.id)} className="text-white/40 hover:text-red-400 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
                 ))}
