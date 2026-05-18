@@ -4,12 +4,6 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
 
-const retroProducts = [
-  { name: "Italy '94 Retro", price: 79.99, image: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=400&q=80' },
-  { name: "Brazil '70 Retro", price: 84.99, image: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=400&q=80' },
-  { name: "England '66 Retro", price: 74.99, image: 'https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=400&q=80' },
-]
-
 export default function RetroCollection() {
   return (
     <section className="bg-black py-24 overflow-hidden">
@@ -62,32 +56,6 @@ export default function RetroCollection() {
               </Link>
             </motion.div>
 
-            {/* Mini product grid */}
-            <div className="grid grid-cols-3 gap-3">
-              {retroProducts.map((p, i) => (
-                <motion.div
-                  key={p.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="group cursor-pointer"
-                >
-                  <Link href="/shop?version=retro">
-                    <div className="relative aspect-square overflow-hidden bg-zinc-900 mb-2">
-                      <Image
-                        src={p.image}
-                        alt={p.name}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    </div>
-                    <p className="text-white text-xs font-medium leading-tight">{p.name}</p>
-                    <p className="text-white/50 text-xs">${p.price}</p>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
           </div>
         </div>
       </div>

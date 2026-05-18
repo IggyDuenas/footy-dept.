@@ -7,52 +7,6 @@ import { supabase } from '@/lib/supabase'
 import { Product } from '@/types'
 import ProductCard from '@/components/ProductCard'
 
-// Fallback demo products when DB is empty
-const DEMO_PRODUCTS: Product[] = [
-  {
-    id: '1', name: 'Brazil Home Jersey 2026', slug: 'brazil-home-2026',
-    type: 'national', country: 'Brazil', version: 'fan', year: 2026,
-    description: 'Iconic yellow and green.', price: 89.99, compare_at_price: 119.99,
-    images: ['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80'],
-    sizes: ['S','M','L','XL'], featured: true, inventory: 50, created_at: '',
-  },
-  {
-    id: '2', name: 'France Away Kit 2026', slug: 'france-away-2026',
-    type: 'national', country: 'France', version: 'fan', year: 2026,
-    description: 'Clean white away edition.', price: 94.99, compare_at_price: 124.99,
-    images: ['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=600&q=80'],
-    sizes: ['S','M','L','XL'], featured: true, inventory: 35, created_at: '',
-  },
-  {
-    id: '3', name: "Argentina '86 Retro", slug: 'argentina-86-retro',
-    type: 'national', country: 'Argentina', version: 'retro', year: 1986,
-    description: 'Hand-of-God era classic.', price: 79.99,
-    images: ['https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&q=80'],
-    sizes: ['S','M','L','XL'], featured: true, inventory: 20, created_at: '',
-  },
-  {
-    id: '4', name: 'Mystery Box — Premium', slug: 'mystery-box-premium',
-    type: 'mystery', country: 'Various', version: 'fan', year: 2026,
-    description: 'Surprise kit, always premium.', price: 59.99, compare_at_price: 99.99,
-    images: ['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=600&q=80'],
-    sizes: ['S','M','L','XL'], featured: true, inventory: 100, created_at: '',
-  },
-  {
-    id: '5', name: 'USA 2026 World Cup Kit', slug: 'usa-2026-home',
-    type: 'national', country: 'USA', version: 'fan', year: 2026,
-    description: 'Host nation, home edition.', price: 84.99, compare_at_price: 109.99,
-    images: ['https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=600&q=80'],
-    sizes: ['S','M','L','XL','XXL'], featured: true, inventory: 60, created_at: '',
-  },
-  {
-    id: '6', name: "Germany Classic '90 Retro", slug: 'germany-90-retro',
-    type: 'national', country: 'Germany', version: 'retro', year: 1990,
-    description: 'World Cup winners edition.', price: 74.99,
-    images: ['https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=80'],
-    sizes: ['S','M','L','XL'], featured: false, inventory: 15, created_at: '',
-  },
-]
-
 export default function BestSellers() {
   const [products, setProducts] = useState<Product[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -63,7 +17,7 @@ export default function BestSellers() {
       .select('*')
       .eq('featured', true)
       .limit(8)
-      .then(({ data }) => setProducts(data?.length ? data : DEMO_PRODUCTS))
+      .then(({ data }) => setProducts(data ?? []))
   }, [])
 
   const scroll = (dir: 'left' | 'right') => {
@@ -71,7 +25,7 @@ export default function BestSellers() {
     scrollRef.current.scrollBy({ left: dir === 'left' ? -340 : 340, behavior: 'smooth' })
   }
 
-  const displayProducts = products.length ? products : DEMO_PRODUCTS
+  const displayProducts = products
 
   return (
     <section className="bg-[#080808] py-24">

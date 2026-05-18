@@ -14,38 +14,6 @@ import { Product, Badge } from '@/types'
 import { useCartStore } from '@/store/cartStore'
 import toast from 'react-hot-toast'
 
-// ─── Demo fallback ────────────────────────────────────────────────────────────
-
-const DEMO: Record<string, Product> = {
-  'brazil-home-2026': {
-    id: '1', name: 'Brazil Home Jersey 2026', slug: 'brazil-home-2026',
-    type: 'national', country: 'Brazil', version: 'fan', year: 2026,
-    description: 'The iconic Seleção returns in full force. Crafted for the fanwear faithful — bold yellow, deep green, and a cut that moves with you.',
-    price: 89.99, compare_at_price: 119.99,
-    images: ['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=900&q=80', 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=900&q=80'],
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'], featured: true, inventory: 50, created_at: '',
-    customization_enabled: true, customization_price: 10, available_badges: [],
-  },
-  'france-away-2026': {
-    id: '2', name: 'France Away Kit 2026', slug: 'france-away-2026',
-    type: 'national', country: 'France', version: 'fan', year: 2026,
-    description: 'Les Bleus go clean. The 2026 away edition in stark white with signature blue trim — a modern classic.',
-    price: 94.99, compare_at_price: 124.99,
-    images: ['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=900&q=80', 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=900&q=80'],
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'], featured: true, inventory: 35, created_at: '',
-    customization_enabled: true, customization_price: 10, available_badges: [],
-  },
-  'mystery-box-premium': {
-    id: '4', name: 'Mystery Box — Premium', slug: 'mystery-box-premium',
-    type: 'mystery', country: 'Various', version: 'fan', year: 2026,
-    description: 'You pick the size, we pick the kit. Could be a retro gem, a current national team, or a limited edition. Always premium, always a surprise.',
-    price: 59.99, compare_at_price: 99.99,
-    images: ['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=900&q=80'],
-    sizes: ['S', 'M', 'L', 'XL'], featured: true, inventory: 100, created_at: '',
-    customization_enabled: false, customization_price: 10, available_badges: [],
-  },
-}
-
 const accordions = [
   { title: 'Size Guide', content: 'XS: 34-36", S: 36-38", M: 38-40", L: 40-42", XL: 42-44", XXL: 44-46". We recommend sizing up for a relaxed fit.' },
   { title: 'Shipping Info', content: 'Standard shipping 5-7 business days. Express 2-3 days. All orders are tracked and insured. Free shipping on orders over $100.' },
@@ -77,7 +45,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   useEffect(() => {
     const fetchProduct = async () => {
       const { data } = await supabase.from('products').select('*').eq('slug', slug).single()
-      let p: Product | null = data || DEMO[slug] || null
+      let p: Product | null = data || null
 
       if (p) {
         // Fetch available badges for this product

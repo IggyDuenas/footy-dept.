@@ -49,19 +49,6 @@ const toSlug = (s: string) =>
 const fromSlug = (slug: string, list: string[]) =>
   list.find((item) => toSlug(item) === slug) ?? null
 
-// ─── Demo products ────────────────────────────────────────────────────────────
-
-const DEMO_PRODUCTS: Product[] = [
-  { id:'1', name:'Brazil Home Jersey 2026', slug:'brazil-home-2026', type:'national', country:'Brazil', version:'fan', year:2026, description:'Iconic yellow and green.', price:89.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:50, created_at:'' },
-  { id:'2', name:'France Away Kit 2026', slug:'france-away-2026', type:'national', country:'France', version:'fan', year:2026, description:'Clean white away edition.', price:94.99, compare_at_price:124.99, images:['https://images.unsplash.com/photo-1552318965-6e6be7484ada?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:35, created_at:'' },
-  { id:'3', name:"Argentina '86 Retro", slug:'argentina-86-retro', type:'national', country:'Argentina', version:'retro', year:1986, description:'Hand-of-God era classic.', price:79.99, images:['https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:20, created_at:'' },
-  { id:'4', name:'Mystery Box — Premium', slug:'mystery-box-premium', type:'mystery', country:'Various', version:'fan', year:2026, description:'Surprise kit.', price:59.99, compare_at_price:99.99, images:['https://images.unsplash.com/photo-1614632537239-e2258b9ef5f2?w=600&q=80'], sizes:['S','M','L','XL'], featured:true, inventory:100, created_at:'' },
-  { id:'5', name:'USA 2026 World Cup Kit', slug:'usa-2026-home', type:'national', country:'USA', version:'fan', year:2026, description:'Host nation, home edition.', price:84.99, compare_at_price:109.99, images:['https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=600&q=80'], sizes:['S','M','L','XL','XXL'], featured:true, inventory:60, created_at:'' },
-  { id:'6', name:"Germany Classic '90 Retro", slug:'germany-90-retro', type:'national', country:'Germany', version:'retro', year:1990, description:'World Cup winners edition.', price:74.99, images:['https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:15, created_at:'' },
-  { id:'7', name:'Spain Home 2026', slug:'spain-home-2026', type:'national', country:'Spain', version:'fan', year:2026, description:'La Roja returns.', price:89.99, images:['https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:40, created_at:'' },
-  { id:'8', name:'England Away 2026', slug:'england-away-2026', type:'national', country:'England', version:'fan', year:2026, description:'Three Lions away.', price:92.99, compare_at_price:119.99, images:['https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=600&q=80'], sizes:['S','M','L','XL'], featured:false, inventory:30, created_at:'' },
-]
-
 // ─── Filter state type ─────────────────────────────────────────────────────────
 
 interface Filters {
@@ -128,24 +115,11 @@ function ShopContent() {
       }
 
       const { data } = await query.order('created_at', { ascending: false })
-      setProducts(data?.length ? data : filterDemo(activeFilters))
+      setProducts(data ?? [])
       setLoading(false)
     }
     fetchProducts()
   }, [activeFilters])
-
-  const filterDemo = (filters: Filters) =>
-    DEMO_PRODUCTS.filter((p) => {
-      if (filters.type    && p.type !== filters.type) return false
-      if (filters.league  && p.league !== filters.league) return false
-      if (filters.country && p.country.toLowerCase() !== filters.country.toLowerCase()) return false
-      if (filters.version && p.version !== filters.version) return false
-      if (filters.era) {
-        const [min, max] = ERA_RANGES[filters.era]
-        if (p.year < min || p.year > max) return false
-      }
-      return true
-    })
 
   // When type changes, clear filters that no longer apply
   const setType = (value: string) => {
