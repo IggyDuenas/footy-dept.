@@ -14,7 +14,7 @@ const links = {
     { label: 'Contact', href: '#' },
   ],
   Brand: [
-    { label: 'About', href: '#' },
+    { label: 'About', href: '/about' },
     { label: 'Football Culture', href: '#' },
     { label: 'Wholesale', href: '#' },
     { label: 'Admin', href: '/admin' },
