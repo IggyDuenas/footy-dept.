@@ -16,8 +16,6 @@ const links = {
   Brand: [
     { label: 'About', href: '/about' },
     { label: 'Football Culture', href: '#' },
-    { label: 'Wholesale', href: '#' },
-    { label: 'Admin', href: '/admin' },
   ],
 }
 
@@ -56,9 +54,9 @@ export default function Footer() {
         </div>
 
         {/* Bottom */}
-        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-white/20 text-xs">
-            © 2026 Footy Dept. All rights reserved. Not affiliated with any official football body.
+        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <p className="text-white/20 text-xs max-w-xl leading-relaxed">
+            © 2026 Footy Dept. All rights reserved. Footy Dept. is an independent retailer of unofficial fan kits. We are not affiliated with, endorsed by, or licensed by any football club, league, federation, or governing body. All team names, crests, and trademarks belong to their respective owners.
           </p>
           <div className="flex gap-6">
             <Link href="#" className="text-white/20 text-xs hover:text-white/40 transition-colors">Privacy</Link>
