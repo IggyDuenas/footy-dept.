@@ -17,7 +17,7 @@ import toast from 'react-hot-toast'
 const accordions = [
   { title: 'Size Guide', content: 'XS: 34-36", S: 36-38", M: 38-40", L: 40-42", XL: 42-44", XXL: 44-46". We recommend sizing up for a relaxed fit.' },
   { title: 'Shipping Info', content: 'Standard shipping 5-7 business days. Express 2-3 days. All orders are tracked and insured. Free shipping on orders over $100.' },
-  { title: 'Returns & FAQ', content: "Unworn items can be returned within 30 days. Mystery boxes are final sale. Contact support for any sizing issues — we'll make it right." },
+  { title: 'Returns & FAQ', content: "Unworn items can be returned within 30 days. Contact support for any sizing issues — we'll make it right." },
 ]
 
 // ─── Component ────────────────────────────────────────────────────────────────

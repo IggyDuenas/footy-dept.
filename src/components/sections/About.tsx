@@ -26,8 +26,8 @@ export default function About() {
             {/* Main image */}
             <div className="relative aspect-[4/5] overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=900&q=80"
-                alt="Football culture"
+                src="/bornforthepitch.jpg"
+                alt="Born for the Pitch"
                 fill
                 className="object-cover"
               />

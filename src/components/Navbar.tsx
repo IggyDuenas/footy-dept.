@@ -14,7 +14,7 @@ const navLinks = [
   { label: 'Clubs', href: '/shop?type=club' },
   { label: 'Retro', href: '/shop?version=retro' },
   { label: 'National Teams', href: '/shop?type=national' },
-  { label: 'Mystery Box', href: '/shop?type=mystery' },
+  { label: 'About', href: '/about' },
 ]
 
 export default function Navbar({ onSearchOpen }: NavbarProps) {

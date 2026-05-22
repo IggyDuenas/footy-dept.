@@ -61,10 +61,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.version === 'retro' && (
               <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">Retro</span>
             )}
-            {product.type === 'mystery' && (
-              <span className="bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">Mystery</span>
-            )}
-            {product.version === 'player' && (
+{product.version === 'player' && (
               <span className="bg-white text-black text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">Player</span>
             )}
             {discount && (

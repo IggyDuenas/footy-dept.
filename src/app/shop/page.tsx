@@ -17,7 +17,6 @@ import { Product } from '@/types'
 const TYPES = [
   { value: 'club',     label: 'Clubs' },
   { value: 'national', label: 'National Teams' },
-  { value: 'mystery',  label: 'Mystery Box' },
 ]
 
 const LEAGUES = [
@@ -96,8 +95,7 @@ function ShopContent() {
     if (eraParam && ERA_RANGES[eraParam]) initial.era = eraParam
 
     setActiveFilters(initial)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [searchParams])
 
   // Fetch products whenever filters change
   useEffect(() => {
@@ -134,8 +132,6 @@ function ShopContent() {
       if (value !== 'club') delete next.league
       // clear country when not national
       if (value !== 'national') delete next.country
-      // clear version when mystery
-      if (value === 'mystery') delete next.version
       return next
     })
   }
@@ -285,8 +281,8 @@ function ShopContent() {
                 </div>
               )}
 
-              {/* VERSION — hidden only when type === 'mystery' */}
-              {activeType !== 'mystery' && (
+              {/* VERSION */}
+              {(
                 <div>
                   <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Version</p>
                   <div className="flex flex-col gap-2">

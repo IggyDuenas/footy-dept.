@@ -5,13 +5,12 @@ const links = {
     { label: 'Clubs', href: '/shop?type=club' },
     { label: 'Retro Collection', href: '/shop?version=retro' },
     { label: 'National Teams', href: '/shop?type=national' },
-    { label: 'Mystery Box', href: '/shop?type=mystery' },
   ],
   Support: [
     { label: 'Track Order', href: '/track' },
-    { label: 'Sizing Guide', href: '#' },
-    { label: 'Returns', href: '#' },
-    { label: 'Contact', href: '#' },
+    { label: 'Sizing Guide', href: '/legal' },
+    { label: 'Returns', href: '/legal' },
+    { label: 'Contact', href: '/contact' },
   ],
   Brand: [
     { label: 'About', href: '/about' },
@@ -59,9 +58,9 @@ export default function Footer() {
             © 2026 Footy Dept. All rights reserved. Footy Dept. is an independent retailer of unofficial fan kits. We are not affiliated with, endorsed by, or licensed by any football club, league, federation, or governing body. All team names, crests, and trademarks belong to their respective owners.
           </p>
           <div className="flex gap-6">
-            <Link href="#" className="text-white/20 text-xs hover:text-white/40 transition-colors">Privacy</Link>
-            <Link href="#" className="text-white/20 text-xs hover:text-white/40 transition-colors">Terms</Link>
-            <Link href="#" className="text-white/20 text-xs hover:text-white/40 transition-colors">Cookies</Link>
+            <Link href="/legal?tab=privacy" className="text-white/20 text-xs hover:text-white/40 transition-colors">Privacy</Link>
+            <Link href="/legal?tab=terms" className="text-white/20 text-xs hover:text-white/40 transition-colors">Terms</Link>
+            <Link href="/legal?tab=cookies" className="text-white/20 text-xs hover:text-white/40 transition-colors">Cookies</Link>
           </div>
         </div>
       </div>

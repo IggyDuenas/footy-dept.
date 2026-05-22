@@ -13,7 +13,7 @@ interface SearchModalProps {
   onClose: () => void
 }
 
-const POPULAR = ['Brazil Jersey', 'France Kit', 'Retro 90s', 'Mystery Box', 'USA 2026']
+const POPULAR = ['Brazil Jersey', 'France Kit', 'Retro 90s', 'USA 2026']
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [query, setQuery] = useState('')
