@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Minus, Plus, ShoppingBag } from 'lucide-react'
 import Image from 'next/image'
@@ -7,9 +8,13 @@ import { useCartStore } from '@/store/cartStore'
 
 export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, total } = useCartStore()
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   const handleCheckout = async () => {
     if (items.length === 0) return
+    setCheckoutLoading(true)
+    setCheckoutError(null)
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -20,9 +25,14 @@ export default function CartDrawer() {
       if (data.url) {
         closeCart()
         window.location.href = data.url
+      } else {
+        setCheckoutError(data.error || 'Something went wrong. Please try again.')
       }
     } catch (err) {
       console.error('Checkout error:', err)
+      setCheckoutError('Could not reach checkout. Check your connection.')
+    } finally {
+      setCheckoutLoading(false)
     }
   }
 
@@ -161,11 +171,15 @@ export default function CartDrawer() {
                   <span className="text-white font-bold text-lg">${total().toFixed(2)}</span>
                 </div>
                 <p className="text-white/30 text-xs">Shipping calculated at checkout</p>
+                {checkoutError && (
+                  <p className="text-red-400 text-xs text-center">{checkoutError}</p>
+                )}
                 <button
                   onClick={handleCheckout}
-                  className="w-full bg-white text-black font-black tracking-widest uppercase text-sm py-4 rounded-none hover:bg-blue-500 hover:text-white transition-colors duration-200"
+                  disabled={checkoutLoading}
+                  className="w-full bg-white text-black font-black tracking-widest uppercase text-sm py-4 rounded-none hover:bg-blue-500 hover:text-white transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Checkout — ${total().toFixed(2)}
+                  {checkoutLoading ? 'Redirecting...' : `Checkout — $${total().toFixed(2)}`}
                 </button>
                 <button
                   onClick={closeCart}

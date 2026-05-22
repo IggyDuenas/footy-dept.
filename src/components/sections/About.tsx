@@ -26,7 +26,7 @@ export default function About() {
             {/* Main image */}
             <div className="relative aspect-[4/5] overflow-hidden">
               <Image
-                src="/bornforthepitch.jpg"
+                src="/images/mainpage/bornforthepitch.jpg"
                 alt="Born for the Pitch"
                 fill
                 className="object-cover"

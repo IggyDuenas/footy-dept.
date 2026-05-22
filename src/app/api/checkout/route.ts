@@ -26,7 +26,9 @@ export async function POST(req: NextRequest) {
           product_data: {
             name: item.product.name,
             description: descParts.join(' | '),
-            images: item.product.images.slice(0, 1),
+            images: item.product.images
+              .slice(0, 1)
+              .filter((url) => url.startsWith('https://')),
             metadata: {
               product_id: item.product.id,
               slug: item.product.slug,

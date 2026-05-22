@@ -118,7 +118,7 @@ export default function AboutPage() {
           >
             <div className="relative aspect-[4/5] overflow-hidden">
               <Image
-                src="/bornforthepitch.jpg"
+                src="/images/mainpage/bornforthepitch.jpg"
                 alt="Born for the pitch"
                 fill
                 className="object-cover"
