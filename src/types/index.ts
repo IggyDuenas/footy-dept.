@@ -39,6 +39,8 @@ export interface Order {
   total_price: number
   status: 'pending' | 'processing' | 'shipped' | 'delivered'
   stripe_session_id: string
+  tracking_number?: string
+  tracking_url?: string
   created_at: string
   order_items?: OrderItem[]
 }

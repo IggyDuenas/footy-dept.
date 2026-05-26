@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import {
   Package, ShoppingBag, TrendingUp, Eye, EyeOff, Plus,
-  Edit, Trash2, Check, X, LogOut, Tag,
+  Edit, Trash2, Check, X, LogOut, Tag, Truck, Search, ChevronDown, ChevronUp, ExternalLink,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Badge, Product, Order } from '@/types'
@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'footydept2026'
 
-type Tab = 'products' | 'orders' | 'badges'
+type Tab = 'products' | 'orders' | 'badges' | 'tracking'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -69,6 +69,12 @@ export default function AdminPage() {
   const [editingBadge, setEditingBadge] = useState<Partial<Badge> | null>(null)
   const [showBadgeForm, setShowBadgeForm] = useState(false)
 
+  // Tracking state
+  const [trackingSearch, setTrackingSearch] = useState('')
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
+  const [trackingEdits, setTrackingEdits] = useState<Record<string, { tracking_number: string; tracking_url: string; status: string }>>({})
+  const [savingTracking, setSavingTracking] = useState<string | null>(null)
+
   // ── Auth ───────────────────────────────────────────────────────────────────
 
   const handleLogin = (e: React.FormEvent) => {
@@ -100,8 +106,8 @@ export default function AdminPage() {
     if (tab === 'products') {
       const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
       setProducts(data || [])
-    } else if (tab === 'orders') {
-      const { data } = await supabase.from('orders').select('*, order_items(*, product:products(name))').order('created_at', { ascending: false })
+    } else if (tab === 'orders' || tab === 'tracking') {
+      const { data } = await supabase.from('orders').select('*, order_items(*, product:products(name, images))').order('created_at', { ascending: false })
       setOrders(data || [])
     } else if (tab === 'badges') {
       const { data } = await supabase.from('badges').select('*').order('name')
@@ -264,6 +270,41 @@ export default function AdminPage() {
     fetchData()
   }
 
+  // ── Tracking ───────────────────────────────────────────────────────────────
+
+  const initTrackingEdit = (order: Order) => {
+    if (trackingEdits[order.id]) return
+    setTrackingEdits((prev) => ({
+      ...prev,
+      [order.id]: {
+        tracking_number: order.tracking_number || '',
+        tracking_url: order.tracking_url || '',
+        status: order.status,
+      },
+    }))
+  }
+
+  const handleSaveTracking = async (orderId: string) => {
+    const edit = trackingEdits[orderId]
+    if (!edit) return
+    setSavingTracking(orderId)
+    const { error } = await supabase
+      .from('orders')
+      .update({
+        status: edit.status,
+        tracking_number: edit.tracking_number || null,
+        tracking_url: edit.tracking_url || null,
+      })
+      .eq('id', orderId)
+    if (error) {
+      toast.error('Failed to save tracking')
+    } else {
+      toast.success('Tracking saved')
+      fetchData()
+    }
+    setSavingTracking(null)
+  }
+
   // ── Login screen ───────────────────────────────────────────────────────────
 
   if (!authed) {
@@ -348,7 +389,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-0 border-b border-white/10 mb-8">
-          {(['products', 'orders', 'badges'] as Tab[]).map((t) => (
+          {(['products', 'orders', 'tracking', 'badges'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -750,6 +791,223 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TRACKING TAB ─────────────────────────────────────────────────── */}
+        {tab === 'tracking' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-white font-black text-2xl uppercase">Order Tracking</h2>
+              <p className="text-white/30 text-xs">{orders.length} total orders</p>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-6">
+              <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or order ID..."
+                value={trackingSearch}
+                onChange={(e) => setTrackingSearch(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 pl-10 pr-5 py-3 text-sm outline-none focus:border-white/30 transition-colors"
+              />
+            </div>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-white/5 animate-pulse" />)}
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-16 border border-white/10">
+                <Truck size={32} className="text-white/20 mx-auto mb-3" />
+                <p className="text-white/30">No orders yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {orders
+                  .filter((o) => {
+                    const q = trackingSearch.toLowerCase()
+                    return !q || o.customer_name.toLowerCase().includes(q) || o.customer_email.toLowerCase().includes(q) || o.id.toLowerCase().includes(q)
+                  })
+                  .map((order) => {
+                    const edit = trackingEdits[order.id]
+                    const isExpanded = expandedOrderId === order.id
+                    const statusColor =
+                      order.status === 'delivered'  ? 'text-green-400 bg-green-500/10 border-green-500/20' :
+                      order.status === 'shipped'    ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
+                      order.status === 'processing' ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' :
+                      'text-white/40 bg-white/5 border-white/10'
+
+                    return (
+                      <div key={order.id} className="border border-white/10 hover:border-white/20 transition-colors">
+                        {/* Row header — always visible */}
+                        <button
+                          className="w-full flex items-center justify-between px-5 py-4 text-left"
+                          onClick={() => {
+                            if (isExpanded) {
+                              setExpandedOrderId(null)
+                            } else {
+                              setExpandedOrderId(order.id)
+                              initTrackingEdit(order)
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-6 min-w-0">
+                            <div className="min-w-0">
+                              <p className="text-white font-bold text-sm">{order.customer_name}</p>
+                              <p className="text-white/40 text-xs truncate">{order.customer_email}</p>
+                            </div>
+                            <p className="text-white/20 text-xs hidden md:block font-mono">{order.id.slice(0, 16)}...</p>
+                          </div>
+                          <div className="flex items-center gap-4 flex-shrink-0 ml-4">
+                            <p className="text-white font-bold text-sm">${order.total_price.toFixed(2)}</p>
+                            <span className={`text-[10px] font-black px-2 py-1 uppercase tracking-wider border ${statusColor}`}>
+                              {order.status}
+                            </span>
+                            {order.tracking_number && (
+                              <span className="text-[10px] text-blue-400 border border-blue-500/20 bg-blue-500/5 px-2 py-1 uppercase tracking-wider hidden md:block">
+                                Tracked
+                              </span>
+                            )}
+                            <p className="text-white/20 text-xs hidden md:block">{new Date(order.created_at).toLocaleDateString()}</p>
+                            {isExpanded ? <ChevronUp size={14} className="text-white/40" /> : <ChevronDown size={14} className="text-white/40" />}
+                          </div>
+                        </button>
+
+                        {/* Expanded detail */}
+                        {isExpanded && edit && (
+                          <div className="border-t border-white/10 px-5 py-6 grid md:grid-cols-2 gap-8">
+
+                            {/* Left — order details */}
+                            <div>
+                              <p className="text-white/30 text-[10px] tracking-widest uppercase mb-4">Order Details</p>
+
+                              {/* Customer */}
+                              <div className="space-y-1 mb-5">
+                                <p className="text-white text-sm font-semibold">{order.customer_name}</p>
+                                <p className="text-white/50 text-xs">{order.customer_email}</p>
+                              </div>
+
+                              {/* Shipping address */}
+                              <div className="bg-white/3 border border-white/5 p-4 mb-5">
+                                <p className="text-white/30 text-[10px] tracking-widest uppercase mb-2">Ship To</p>
+                                <p className="text-white/70 text-sm leading-relaxed">
+                                  {order.shipping_address.line1}
+                                  {order.shipping_address.line2 && <>, {order.shipping_address.line2}</>}<br />
+                                  {order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}<br />
+                                  {order.shipping_address.country}
+                                </p>
+                              </div>
+
+                              {/* Items */}
+                              {order.order_items && order.order_items.length > 0 && (
+                                <div>
+                                  <p className="text-white/30 text-[10px] tracking-widest uppercase mb-3">Items</p>
+                                  <div className="space-y-3">
+                                    {order.order_items.map((item) => (
+                                      <div key={item.id} className="flex items-center gap-3">
+                                        {item.product?.images?.[0] && (
+                                          <div className="relative w-10 h-10 bg-zinc-900 flex-shrink-0 overflow-hidden">
+                                            <img src={item.product.images[0]} alt={item.product?.name} className="w-full h-full object-cover" />
+                                          </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-white text-xs font-medium truncate">{item.product?.name ?? 'Unknown'}</p>
+                                          <p className="text-white/40 text-xs">Qty {item.quantity} · Size {item.size}</p>
+                                          {item.custom_name && (
+                                            <p className="text-white/30 text-xs">Name: {item.custom_name} {item.custom_number}</p>
+                                          )}
+                                        </div>
+                                        <p className="text-white text-xs font-bold flex-shrink-0">${(item.unit_price * item.quantity).toFixed(2)}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-white/10 mt-3 pt-3 flex justify-between">
+                                    <p className="text-white/40 text-xs">Total</p>
+                                    <p className="text-white font-bold text-sm">${order.total_price.toFixed(2)}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Right — tracking controls */}
+                            <div>
+                              <p className="text-white/30 text-[10px] tracking-widest uppercase mb-4">Tracking & Status</p>
+
+                              <div className="space-y-4">
+                                {/* Status */}
+                                <div>
+                                  <label className="block text-white/40 text-[10px] tracking-widest uppercase mb-2">Status</label>
+                                  <select
+                                    value={edit.status}
+                                    onChange={(e) => setTrackingEdits((prev) => ({ ...prev, [order.id]: { ...edit, status: e.target.value } }))}
+                                    className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                                  >
+                                    <option value="pending" className="bg-[#111]">Pending</option>
+                                    <option value="processing" className="bg-[#111]">Processing</option>
+                                    <option value="shipped" className="bg-[#111]">Shipped</option>
+                                    <option value="delivered" className="bg-[#111]">Delivered</option>
+                                  </select>
+                                </div>
+
+                                {/* Tracking number */}
+                                <div>
+                                  <label className="block text-white/40 text-[10px] tracking-widest uppercase mb-2">Tracking Number</label>
+                                  <input
+                                    type="text"
+                                    value={edit.tracking_number}
+                                    onChange={(e) => setTrackingEdits((prev) => ({ ...prev, [order.id]: { ...edit, tracking_number: e.target.value } }))}
+                                    placeholder="1Z999AA10123456784"
+                                    className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-4 py-3 text-sm outline-none focus:border-white/30 transition-colors font-mono"
+                                  />
+                                </div>
+
+                                {/* Tracking URL */}
+                                <div>
+                                  <label className="block text-white/40 text-[10px] tracking-widest uppercase mb-2">Tracking URL</label>
+                                  <input
+                                    type="url"
+                                    value={edit.tracking_url}
+                                    onChange={(e) => setTrackingEdits((prev) => ({ ...prev, [order.id]: { ...edit, tracking_url: e.target.value } }))}
+                                    placeholder="https://tracking.carrier.com/..."
+                                    className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/20 px-4 py-3 text-sm outline-none focus:border-white/30 transition-colors"
+                                  />
+                                  {edit.tracking_url && (
+                                    <a
+                                      href={edit.tracking_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-blue-400 text-xs mt-2 hover:text-blue-300 transition-colors"
+                                    >
+                                      <ExternalLink size={10} /> Preview tracking link
+                                    </a>
+                                  )}
+                                </div>
+
+                                <button
+                                  onClick={() => handleSaveTracking(order.id)}
+                                  disabled={savingTracking === order.id}
+                                  className="flex items-center gap-2 bg-white text-black font-black text-xs tracking-widest uppercase px-6 py-3 hover:bg-blue-500 hover:text-white transition-colors disabled:opacity-50"
+                                >
+                                  <Check size={14} />
+                                  {savingTracking === order.id ? 'Saving...' : 'Save Tracking'}
+                                </button>
+
+                                {/* Stripe session link */}
+                                <div className="border-t border-white/5 pt-4">
+                                  <p className="text-white/20 text-[10px] tracking-widest uppercase mb-1">Stripe Session</p>
+                                  <p className="text-white/30 text-xs font-mono break-all">{order.stripe_session_id}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
               </div>
             )}
           </div>
