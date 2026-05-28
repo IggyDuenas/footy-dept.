@@ -144,10 +144,6 @@ export default function AdminPage() {
       toast.error('Name and slug are required')
       return
     }
-    if (!editingProduct.year || editingProduct.year < 1900 || editingProduct.year > 2100) {
-      toast.error('Year must be between 1900 and 2100')
-      return
-    }
 
     const productData = { ...editingProduct }
     // Apply "Other" overrides
@@ -438,7 +434,11 @@ export default function AdminPage() {
                     {/* Name */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Name</label>
-                      <input type="text" value={ep.name || ''} onChange={(e) => setEditingProduct({ ...ep, name: e.target.value })}
+                      <input type="text" value={ep.name || ''} onChange={(e) => {
+                        const name = e.target.value
+                        const autoSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                        setEditingProduct({ ...ep, name, slug: autoSlug })
+                      }}
                         className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
@@ -509,7 +509,7 @@ export default function AdminPage() {
                     {/* Year */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Year</label>
-                      <input type="number" min={1900} max={2100} value={ep.year || 2026}
+                      <input type="number" value={ep.year || 2026}
                         onChange={(e) => setEditingProduct({ ...ep, year: parseInt(e.target.value) || 2026 })}
                         className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
@@ -548,8 +548,8 @@ export default function AdminPage() {
                     {/* Inventory */}
                     <div>
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Inventory</label>
-                      <input type="number" value={ep.inventory || 0}
-                        onChange={(e) => setEditingProduct({ ...ep, inventory: parseInt(e.target.value) || 0 })}
+                      <input type="number" min={0} value={ep.inventory || 0}
+                        onChange={(e) => setEditingProduct({ ...ep, inventory: Math.max(0, parseInt(e.target.value) || 0) })}
                         className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
