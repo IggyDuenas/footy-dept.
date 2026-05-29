@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
+import { BannerProvider } from '@/context/BannerContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -24,9 +25,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className={`${inter.className} bg-black text-white antialiased`}>
-        <AnnouncementBanner />
-        {children}
-        <Toaster
+        <BannerProvider>
+          <AnnouncementBanner />
+          {children}
+          <Toaster
           position="bottom-right"
           toastOptions={{
             style: {
@@ -38,6 +40,7 @@ export default function RootLayout({
             },
           }}
         />
+        </BannerProvider>
       </body>
     </html>
   )

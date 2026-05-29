@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { Product } from '@/types'
+import { useBanner } from '@/context/BannerContext'
 
 interface SearchModalProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [results, setResults] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { bannerVisible } = useBanner()
 
   useEffect(() => {
     if (isOpen) {
@@ -68,7 +70,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             transition={{ duration: 0.2 }}
             className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a] border-b border-white/10"
           >
-            <div className="max-w-3xl mx-auto px-6 py-6">
+            <div className={`max-w-3xl mx-auto px-6 pb-6 ${bannerVisible ? 'pt-[104px]' : 'pt-[72px]'}`}>
               <div className="flex items-center gap-4">
                 <Search size={20} className="text-white/40 flex-shrink-0" />
                 <input

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, User, ShoppingBag, Menu, X } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
+import { useBanner } from '@/context/BannerContext'
 
 interface NavbarProps {
   onSearchOpen: () => void
@@ -22,6 +23,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { toggleCart, itemCount } = useCartStore()
   const count = itemCount()
+  const { bannerVisible } = useBanner()
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20)
@@ -37,7 +39,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
             ? 'bg-black/80 backdrop-blur-xl border-b border-white/5'
             : 'bg-transparent'
         }`}
-        style={{ top: 'var(--banner-h, 0px)' }}
+        style={{ top: bannerVisible ? '40px' : '0px' }}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
