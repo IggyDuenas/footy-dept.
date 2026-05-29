@@ -444,10 +444,6 @@ export default function AdminPage() {
                       <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Name</label>
                       <input type="text" value={ep.name || ''} onChange={(e) => {
                         const name = e.target.value
-<<<<<<< Updated upstream
-                        const autoSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-                        setEditingProduct({ ...ep, name, slug: autoSlug })
-=======
                         const updates: Partial<Product> = { ...ep, name }
                         if (!ep.id) {
                           updates.slug = toSlug(name)
@@ -455,7 +451,6 @@ export default function AdminPage() {
                           if (year) updates.year = year
                         }
                         setEditingProduct(updates)
->>>>>>> Stashed changes
                       }}
                         className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
@@ -563,14 +558,6 @@ export default function AdminPage() {
                         className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
                     </div>
 
-<<<<<<< Updated upstream
-                    {/* Inventory */}
-                    <div>
-                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Inventory</label>
-                      <input type="number" min={0} value={ep.inventory || 0}
-                        onChange={(e) => setEditingProduct({ ...ep, inventory: Math.max(0, parseInt(e.target.value) || 0) })}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
-=======
                     {/* Sold Out toggle */}
                     <div className="flex items-center justify-between bg-white/5 border border-white/10 px-4 py-3">
                       <label className="text-white/40 text-xs tracking-widest uppercase">Sold Out</label>
@@ -581,7 +568,6 @@ export default function AdminPage() {
                       >
                         <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${ep.inventory === 0 ? 'translate-x-5' : 'translate-x-0.5'}`} />
                       </button>
->>>>>>> Stashed changes
                     </div>
 
                     {/* Description */}
