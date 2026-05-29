@@ -31,6 +31,15 @@ const COUNTRIES = [
   'Croatia', 'Uruguay', 'Japan', 'Morocco',
 ]
 
+const TOP_COUNTRIES = ['Brazil', 'France', 'Argentina', 'Germany', 'Spain', 'England']
+
+const COUNTRY_REGIONS: { label: string; countries: string[] }[] = [
+  { label: 'Europe',   countries: ['Italy', 'Portugal', 'Netherlands', 'Belgium', 'Croatia'] },
+  { label: 'Americas', countries: ['USA', 'Mexico', 'Uruguay'] },
+  { label: 'Africa',   countries: ['Morocco'] },
+  { label: 'Asia',     countries: ['Japan'] },
+]
+
 const ERAS = ['2020s', '2010s', '2000s', '1990s', '1980s', '1970s']
 
 const ERA_RANGES: Record<string, [number, number]> = {
@@ -266,7 +275,7 @@ function ShopContent() {
                 <div>
                   <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Country</p>
                   <div className="flex flex-col gap-2">
-                    {COUNTRIES.map((country) => (
+                    {TOP_COUNTRIES.map((country) => (
                       <button
                         key={country}
                         onClick={() => toggleFilter('country', country)}
@@ -276,6 +285,22 @@ function ShopContent() {
                       >
                         {country}
                       </button>
+                    ))}
+                    {COUNTRY_REGIONS.map((region) => (
+                      <div key={region.label} className="mt-3">
+                        <p className="text-white/20 text-[9px] tracking-widest uppercase mb-2">{region.label}</p>
+                        {region.countries.map((country) => (
+                          <button
+                            key={country}
+                            onClick={() => toggleFilter('country', country)}
+                            className={`block text-left text-sm transition-colors mb-2 ${
+                              activeFilters.country === country ? 'text-blue-400' : 'text-white/50 hover:text-white'
+                            }`}
+                          >
+                            {country}
+                          </button>
+                        ))}
+                      </div>
                     ))}
                   </div>
                 </div>
