@@ -4,7 +4,7 @@ import { CartItem } from '@/types'
 
 export async function POST(req: NextRequest) {
   try {
-    const { items }: { items: CartItem[] } = await req.json()
+    const { items, promotionCodeId }: { items: CartItem[]; promotionCodeId?: string } = await req.json()
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 })
@@ -41,7 +41,9 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ||
+      (req.headers.get('origin') ?? `https://${req.headers.get('host')}`) ||
+      'http://localhost:3000'
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -49,6 +51,10 @@ export async function POST(req: NextRequest) {
       mode: 'payment',
       success_url: `${siteUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/shop`,
+      ...(promotionCodeId
+        ? { discounts: [{ promotion_code: promotionCodeId }] }
+        : { allow_promotion_codes: true }
+      ),
       shipping_address_collection: {
         allowed_countries: ['US', 'CA', 'GB', 'AU', 'FR', 'DE', 'ES', 'IT', 'BR', 'MX'],
       },

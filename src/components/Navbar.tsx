@@ -32,11 +32,12 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
   return (
     <>
       <motion.nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed left-0 right-0 z-50 transition-all duration-500 transition-[top] ${
           scrolled
             ? 'bg-black/80 backdrop-blur-xl border-b border-white/5'
             : 'bg-transparent'
         }`}
+        style={{ top: 'var(--banner-h, 0px)' }}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}

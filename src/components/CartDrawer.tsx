@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Minus, Plus, ShoppingBag } from 'lucide-react'
+import { X, Minus, Plus, ShoppingBag, Tag, ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 import { useCartStore } from '@/store/cartStore'
 
@@ -10,6 +10,43 @@ export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, total } = useCartStore()
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  // Coupon state
+  const [couponOpen, setCouponOpen] = useState(false)
+  const [couponCode, setCouponCode] = useState('')
+  const [couponApplied, setCouponApplied] = useState(false)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [appliedPromoId, setAppliedPromoId] = useState<string | null>(null)
+  const [discountDescription, setDiscountDescription] = useState<string | null>(null)
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return
+    setCouponLoading(true)
+    setCouponError(null)
+    try {
+      const res = await fetch('/api/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode }),
+      })
+      const data = await res.json()
+      if (data.valid) {
+        setCouponApplied(true)
+        setAppliedPromoId(data.promotionCodeId)
+        setDiscountDescription(data.discountDescription)
+        setCouponError(null)
+      } else {
+        setCouponApplied(false)
+        setAppliedPromoId(null)
+        setCouponError(data.error || 'Invalid or expired code')
+      }
+    } catch {
+      setCouponError('Could not validate code. Try again.')
+    } finally {
+      setCouponLoading(false)
+    }
+  }
 
   const handleCheckout = async () => {
     if (items.length === 0) return
@@ -19,7 +56,10 @@ export default function CartDrawer() {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({
+          items,
+          ...(couponApplied && appliedPromoId ? { promotionCodeId: appliedPromoId } : {}),
+        }),
       })
       const data = await res.json()
       if (data.url) {
@@ -171,6 +211,75 @@ export default function CartDrawer() {
                   <span className="text-white font-bold text-lg">${total().toFixed(2)}</span>
                 </div>
                 <p className="text-white/30 text-xs">Shipping calculated at checkout</p>
+
+                {/* Coupon code */}
+                <div className="border border-white/10">
+                  <button
+                    onClick={() => setCouponOpen((o) => !o)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-white/50 hover:text-white transition-colors text-xs tracking-wider uppercase"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Tag size={12} />
+                      {couponApplied ? `Code applied: ${couponCode.toUpperCase()}` : 'Have a promo code?'}
+                    </span>
+                    <motion.span
+                      animate={{ rotate: couponOpen ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChevronDown size={12} />
+                    </motion.span>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {couponOpen && (
+                      <motion.div
+                        key="coupon-panel"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-3 pb-3 pt-1 border-t border-white/10 space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={couponCode}
+                              onChange={(e) => {
+                                setCouponCode(e.target.value)
+                                if (couponApplied) {
+                                  setCouponApplied(false)
+                                  setAppliedPromoId(null)
+                                  setDiscountDescription(null)
+                                }
+                                setCouponError(null)
+                              }}
+                              onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                              placeholder="e.g. WORLDCUP"
+                              className="flex-1 bg-white/5 border border-white/10 text-white text-xs px-3 py-2 outline-none focus:border-white/30 placeholder:text-white/20 uppercase tracking-widest"
+                            />
+                            <button
+                              onClick={handleApplyCoupon}
+                              disabled={couponLoading || !couponCode.trim()}
+                              className="px-3 py-2 bg-white text-black text-xs font-black tracking-widest uppercase hover:bg-blue-500 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {couponLoading ? '...' : 'Apply'}
+                            </button>
+                          </div>
+                          {couponApplied && discountDescription && (
+                            <p className="text-green-400 text-xs flex items-center gap-1">
+                              <span>✓</span> {discountDescription} applied
+                            </p>
+                          )}
+                          {couponError && (
+                            <p className="text-red-400 text-xs">{couponError}</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {checkoutError && (
                   <p className="text-red-400 text-xs text-center">{checkoutError}</p>
                 )}

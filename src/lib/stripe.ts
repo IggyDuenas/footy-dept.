@@ -1,3 +1,8 @@
 import Stripe from 'stripe'
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+const key = process.env.STRIPE_SECRET_KEY
+if (!key) throw new Error('Missing env var: STRIPE_SECRET_KEY')
+
+export const stripe = new Stripe(key, {
+  apiVersion: '2026-04-22.dahlia',
+})
