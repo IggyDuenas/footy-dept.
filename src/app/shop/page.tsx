@@ -11,6 +11,7 @@ import ProductCard from '@/components/ProductCard'
 import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabase'
 import { Product } from '@/types'
+import { mixedSort } from '@/lib/sortProducts'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -159,8 +160,8 @@ function ShopContent() {
         query = query.gte('year', min).lte('year', max)
       }
 
-      const { data } = await query.order('created_at', { ascending: false })
-      setProducts(data ?? [])
+      const { data } = await query
+      setProducts(mixedSort(data ?? []))
       setLoading(false)
     }
     fetchProducts()

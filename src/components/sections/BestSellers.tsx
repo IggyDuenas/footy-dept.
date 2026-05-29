@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Product } from '@/types'
 import ProductCard from '@/components/ProductCard'
+import { seededShuffle, getDateSeed } from '@/lib/sortProducts'
 
 export default function BestSellers() {
   const [products, setProducts] = useState<Product[]>([])
@@ -17,15 +18,13 @@ export default function BestSellers() {
       .select('*')
       .eq('featured', true)
       .limit(8)
-      .then(({ data }) => setProducts(data ?? []))
+      .then(({ data }) => setProducts(seededShuffle(data ?? [], getDateSeed())))
   }, [])
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return
     scrollRef.current.scrollBy({ left: dir === 'left' ? -340 : 340, behavior: 'smooth' })
   }
-
-  const displayProducts = products
 
   return (
     <section className="bg-[#080808] py-24">
@@ -64,7 +63,7 @@ export default function BestSellers() {
           className="flex gap-5 overflow-x-auto scrollbar-hide pb-4 -mx-6 px-6"
           style={{ scrollSnapType: 'x mandatory' }}
         >
-          {displayProducts.map((product, i) => (
+          {products.map((product, i) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 30 }}

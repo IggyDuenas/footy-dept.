@@ -160,7 +160,7 @@ export default function AboutPage() {
       {/* ── Full-width image break ────────────────────────────────────────── */}
       <section className="relative h-[60vh] overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1800&q=80"
+          src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1800&q=80"
           alt="Football culture"
           fill
           className="object-cover object-center"
