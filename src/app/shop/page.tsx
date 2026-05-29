@@ -20,12 +20,6 @@ const TYPES = [
   { value: 'national', label: 'National Teams' },
 ]
 
-const LEAGUES = [
-  'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
-  'MLS', 'Liga Portugal', 'Eredivisie', 'Saudi Pro League',
-  'Brasileirão', 'Liga MX', 'Primera División',
-]
-
 // Maps every country name → its continent for the dynamic filter
 const CONTINENT_MAP: Record<string, string> = {
   // Europe
@@ -62,8 +56,10 @@ const CONTINENT_MAP: Record<string, string> = {
 
 const CONTINENT_ORDER = ['Europe', 'Americas', 'Africa', 'Asia']
 
-// Still used for URL slug matching — derived from the map keys
-const COUNTRIES = Object.keys(CONTINENT_MAP)
+// Lowercase-keyed version for matching against lowercase DB values
+const CONTINENT_MAP_LOWER: Record<string, string> = Object.fromEntries(
+  Object.entries(CONTINENT_MAP).map(([k, v]) => [k.toLowerCase(), v])
+)
 
 const ERAS = ['2020s', '2010s', '2000s', '1990s', '1980s', '1970s']
 
@@ -75,12 +71,6 @@ const ERA_RANGES: Record<string, [number, number]> = {
   '1980s': [1980, 1989],
   '1970s': [1970, 1979],
 }
-
-// URL slug helpers
-const toSlug = (s: string) =>
-  s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-const fromSlug = (slug: string, list: string[]) =>
-  list.find((item) => toSlug(item) === slug) ?? null
 
 // ─── Filter state type ─────────────────────────────────────────────────────────
 
@@ -102,6 +92,7 @@ function ShopContent() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeFilters, setActiveFilters] = useState<Filters>({})
   const [filterCountries, setFilterCountries] = useState<string[]>([])
+  const [availableLeagues, setAvailableLeagues] = useState<string[]>([])
 
   // Fetch distinct national countries once for the filter sidebar
   useEffect(() => {
@@ -111,8 +102,26 @@ function ShopContent() {
       .eq('type', 'national')
       .neq('country', '')
       .then(({ data }) => {
-        const unique = Array.from(new Set((data ?? []).map((r: { country: string }) => r.country))).sort()
+        const unique = Array.from(
+          new Set((data ?? []).map((r: { country: string }) => r.country.toLowerCase()))
+        ).sort()
         setFilterCountries(unique)
+      })
+  }, [])
+
+  // Fetch distinct club leagues once for the filter sidebar
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('league')
+      .eq('type', 'club')
+      .not('league', 'is', null)
+      .neq('league', '')
+      .then(({ data }) => {
+        const unique = Array.from(
+          new Set((data ?? []).map((r: { league: string }) => r.league.toLowerCase()))
+        ).sort()
+        setAvailableLeagues(unique)
       })
   }, [])
 
@@ -123,18 +132,10 @@ function ShopContent() {
     if (typeParam && TYPES.some((t) => t.value === typeParam)) initial.type = typeParam
 
     const leagueParam = searchParams.get('league')?.toLowerCase()
-    if (leagueParam) {
-      const found = fromSlug(leagueParam, LEAGUES)
-      if (found) initial.league = found.toLowerCase()
-    }
+    if (leagueParam) initial.league = leagueParam
 
     const countryParam = searchParams.get('country')?.toLowerCase()
-    if (countryParam) {
-      const found = fromSlug(countryParam, COUNTRIES) ?? COUNTRIES.find(
-        (c) => c.toLowerCase() === countryParam
-      )
-      if (found) initial.country = found.toLowerCase()
-    }
+    if (countryParam) initial.country = countryParam
 
     const versionParam = searchParams.get('version')?.toLowerCase()
     if (versionParam === 'fan' || versionParam === 'player' || versionParam === 'retro') initial.version = versionParam
@@ -294,7 +295,9 @@ function ShopContent() {
                 <div>
                   <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">League</p>
                   <div className="flex flex-col gap-2">
-                    {LEAGUES.map((league) => (
+                    {availableLeagues.length === 0 ? (
+                      <p className="text-white/20 text-xs">No options available</p>
+                    ) : availableLeagues.map((league) => (
                       <button
                         key={league}
                         onClick={() => toggleFilter('league', league)}
@@ -302,7 +305,7 @@ function ShopContent() {
                           activeFilters.league === league ? 'text-blue-400' : 'text-white/50 hover:text-white'
                         }`}
                       >
-                        {league}
+                        {league.charAt(0).toUpperCase() + league.slice(1)}
                       </button>
                     ))}
                   </div>
@@ -310,11 +313,19 @@ function ShopContent() {
               )}
 
               {/* COUNTRY — only when type === 'national' */}
-              {activeType === 'national' && filterCountries.length > 0 && (() => {
-                // Group fetched countries by continent using the map
+              {activeType === 'national' && (() => {
+                if (filterCountries.length === 0) {
+                  return (
+                    <div>
+                      <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Country</p>
+                      <p className="text-white/20 text-xs">No options available</p>
+                    </div>
+                  )
+                }
+                // Group lowercase country values by continent
                 const grouped: Record<string, string[]> = {}
                 filterCountries.forEach((c) => {
-                  const continent = CONTINENT_MAP[c] ?? 'Other'
+                  const continent = CONTINENT_MAP_LOWER[c] ?? 'Other'
                   ;(grouped[continent] ??= []).push(c)
                 })
                 const sections = [
@@ -336,7 +347,7 @@ function ShopContent() {
                                 activeFilters.country === country ? 'text-blue-400' : 'text-white/50 hover:text-white'
                               }`}
                             >
-                              {country}
+                              {country.charAt(0).toUpperCase() + country.slice(1)}
                             </button>
                           ))}
                         </div>
