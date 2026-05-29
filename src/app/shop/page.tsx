@@ -25,20 +25,44 @@ const LEAGUES = [
   'Brasileirão', 'Liga MX', 'Primera División',
 ]
 
-const COUNTRIES = [
-  'Brazil', 'France', 'Argentina', 'Germany', 'Spain', 'England',
-  'USA', 'Italy', 'Portugal', 'Netherlands', 'Mexico', 'Belgium',
-  'Croatia', 'Uruguay', 'Japan', 'Morocco',
-]
+// Maps every country name → its continent for the dynamic filter
+const CONTINENT_MAP: Record<string, string> = {
+  // Europe
+  England: 'Europe', France: 'Europe', Germany: 'Europe', Spain: 'Europe',
+  Italy: 'Europe', Portugal: 'Europe', Netherlands: 'Europe', Belgium: 'Europe',
+  Croatia: 'Europe', Norway: 'Europe', Sweden: 'Europe', Denmark: 'Europe',
+  Switzerland: 'Europe', Austria: 'Europe', Scotland: 'Europe', Wales: 'Europe',
+  Ireland: 'Europe', Greece: 'Europe', Turkey: 'Europe', Ukraine: 'Europe',
+  Poland: 'Europe', Serbia: 'Europe', Hungary: 'Europe', Romania: 'Europe',
+  Slovakia: 'Europe', Albania: 'Europe', Slovenia: 'Europe', Finland: 'Europe',
+  Iceland: 'Europe', Georgia: 'Europe', Russia: 'Europe', 'Czech Republic': 'Europe',
+  'North Macedonia': 'Europe', 'Bosnia and Herzegovina': 'Europe', Montenegro: 'Europe',
+  // Americas
+  Brazil: 'Americas', Argentina: 'Americas', USA: 'Americas', Mexico: 'Americas',
+  Uruguay: 'Americas', Colombia: 'Americas', Chile: 'Americas', Ecuador: 'Americas',
+  Peru: 'Americas', Bolivia: 'Americas', Venezuela: 'Americas', Paraguay: 'Americas',
+  Canada: 'Americas', Jamaica: 'Americas', 'Costa Rica': 'Americas',
+  Honduras: 'Americas', Panama: 'Americas', 'El Salvador': 'Americas',
+  Guatemala: 'Americas', 'Trinidad and Tobago': 'Americas',
+  // Africa
+  Morocco: 'Africa', Nigeria: 'Africa', Senegal: 'Africa', Cameroon: 'Africa',
+  Ghana: 'Africa', Egypt: 'Africa', Algeria: 'Africa', Tunisia: 'Africa',
+  'Ivory Coast': 'Africa', 'South Africa': 'Africa', Mali: 'Africa',
+  'DR Congo': 'Africa', Ethiopia: 'Africa', Kenya: 'Africa', Zambia: 'Africa',
+  Zimbabwe: 'Africa', Angola: 'Africa', Uganda: 'Africa', Guinea: 'Africa',
+  'Burkina Faso': 'Africa', 'Cape Verde': 'Africa', Gabon: 'Africa',
+  // Asia / Oceania
+  Japan: 'Asia', 'South Korea': 'Asia', 'Saudi Arabia': 'Asia', Iran: 'Asia',
+  Australia: 'Asia', Qatar: 'Asia', UAE: 'Asia', China: 'Asia',
+  India: 'Asia', Iraq: 'Asia', Jordan: 'Asia', Bahrain: 'Asia',
+  Kuwait: 'Asia', Oman: 'Asia', Thailand: 'Asia', Vietnam: 'Asia',
+  Indonesia: 'Asia', Uzbekistan: 'Asia', Kazakhstan: 'Asia',
+}
 
-const TOP_COUNTRIES = ['Brazil', 'France', 'Argentina', 'Germany', 'Spain', 'England']
+const CONTINENT_ORDER = ['Europe', 'Americas', 'Africa', 'Asia']
 
-const COUNTRY_REGIONS: { label: string; countries: string[] }[] = [
-  { label: 'Europe',   countries: ['Italy', 'Portugal', 'Netherlands', 'Belgium', 'Croatia'] },
-  { label: 'Americas', countries: ['USA', 'Mexico', 'Uruguay'] },
-  { label: 'Africa',   countries: ['Morocco'] },
-  { label: 'Asia',     countries: ['Japan'] },
-]
+// Still used for URL slug matching — derived from the map keys
+const COUNTRIES = Object.keys(CONTINENT_MAP)
 
 const ERAS = ['2020s', '2010s', '2000s', '1990s', '1980s', '1970s']
 
@@ -76,6 +100,20 @@ function ShopContent() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeFilters, setActiveFilters] = useState<Filters>({})
+  const [filterCountries, setFilterCountries] = useState<string[]>([])
+
+  // Fetch distinct national countries once for the filter sidebar
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('country')
+      .eq('type', 'national')
+      .neq('country', '')
+      .then(({ data }) => {
+        const unique = [...new Set((data ?? []).map((r: { country: string }) => r.country))].sort()
+        setFilterCountries(unique)
+      })
+  }, [])
 
   // Initialise filters from URL params on mount
   useEffect(() => {
@@ -271,40 +309,41 @@ function ShopContent() {
               )}
 
               {/* COUNTRY — only when type === 'national' */}
-              {activeType === 'national' && (
-                <div>
-                  <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Country</p>
-                  <div className="flex flex-col gap-2">
-                    {TOP_COUNTRIES.map((country) => (
-                      <button
-                        key={country}
-                        onClick={() => toggleFilter('country', country)}
-                        className={`text-left text-sm transition-colors ${
-                          activeFilters.country === country ? 'text-blue-400' : 'text-white/50 hover:text-white'
-                        }`}
-                      >
-                        {country}
-                      </button>
-                    ))}
-                    {COUNTRY_REGIONS.map((region) => (
-                      <div key={region.label} className="mt-3">
-                        <p className="text-white/20 text-[9px] tracking-widest uppercase mb-2">{region.label}</p>
-                        {region.countries.map((country) => (
-                          <button
-                            key={country}
-                            onClick={() => toggleFilter('country', country)}
-                            className={`block text-left text-sm transition-colors mb-2 ${
-                              activeFilters.country === country ? 'text-blue-400' : 'text-white/50 hover:text-white'
-                            }`}
-                          >
-                            {country}
-                          </button>
-                        ))}
-                      </div>
-                    ))}
+              {activeType === 'national' && filterCountries.length > 0 && (() => {
+                // Group fetched countries by continent using the map
+                const grouped: Record<string, string[]> = {}
+                filterCountries.forEach((c) => {
+                  const continent = CONTINENT_MAP[c] ?? 'Other'
+                  ;(grouped[continent] ??= []).push(c)
+                })
+                const sections = [
+                  ...CONTINENT_ORDER.filter((c) => grouped[c]).map((c) => ({ label: c, countries: grouped[c] })),
+                  ...(grouped['Other'] ? [{ label: 'Other', countries: grouped['Other'] }] : []),
+                ]
+                return (
+                  <div>
+                    <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Country</p>
+                    <div className="flex flex-col">
+                      {sections.map((region) => (
+                        <div key={region.label} className="mb-4">
+                          <p className="text-white/20 text-[9px] tracking-widest uppercase mb-2">{region.label}</p>
+                          {region.countries.map((country) => (
+                            <button
+                              key={country}
+                              onClick={() => toggleFilter('country', country)}
+                              className={`block text-left text-sm transition-colors mb-2 ${
+                                activeFilters.country === country ? 'text-blue-400' : 'text-white/50 hover:text-white'
+                              }`}
+                            >
+                              {country}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
 
               {/* VERSION */}
               {(
@@ -312,9 +351,8 @@ function ShopContent() {
                   <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Version</p>
                   <div className="flex flex-col gap-2">
                     {[
-                      { value: 'fan',    label: 'Fan' },
-                      { value: 'player', label: 'Player' },
-                      { value: 'retro',  label: 'Retro' },
+                      { value: 'fan',   label: 'Fan' },
+                      { value: 'retro', label: 'Retro' },
                     ].map(({ value, label }) => (
                       <button
                         key={value}

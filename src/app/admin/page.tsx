@@ -32,7 +32,7 @@ const LEAGUES = [
 const COUNTRIES = [
   'Brazil', 'France', 'Argentina', 'Germany', 'Spain', 'England',
   'USA', 'Italy', 'Portugal', 'Netherlands', 'Mexico', 'Belgium',
-  'Croatia', 'Uruguay', 'Japan', 'Morocco', 'Other',
+  'Croatia', 'Uruguay', 'Japan', 'Morocco', 'Norway', 'Other',
 ]
 
 const toSlug = (s: string) =>
@@ -475,25 +475,27 @@ export default function AdminPage() {
                       </select>
                     </div>
 
-                    {/* Country */}
-                    <div>
-                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Country</label>
-                      <select
-                        value={COUNTRIES.includes(ep.country || '') ? ep.country : 'Other'}
-                        onChange={(e) => {
-                          setEditingProduct({ ...ep, country: e.target.value === 'Other' ? 'Other' : e.target.value })
-                          if (e.target.value !== 'Other') setCustomCountry('')
-                        }}
-                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                      >
-                        {COUNTRIES.map((c) => <option key={c} value={c} className="bg-[#111]">{c}</option>)}
-                      </select>
-                      {ep.country === 'Other' && (
-                        <input type="text" placeholder="Enter country name" value={customCountry}
-                          onChange={(e) => setCustomCountry(e.target.value)}
-                          className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
-                      )}
-                    </div>
+                    {/* Country — hidden for club type */}
+                    {ep.type !== 'club' && (
+                      <div>
+                        <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Country</label>
+                        <select
+                          value={COUNTRIES.includes(ep.country || '') ? ep.country : 'Other'}
+                          onChange={(e) => {
+                            setEditingProduct({ ...ep, country: e.target.value === 'Other' ? 'Other' : e.target.value })
+                            if (e.target.value !== 'Other') setCustomCountry('')
+                          }}
+                          className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                        >
+                          {COUNTRIES.map((c) => <option key={c} value={c} className="bg-[#111]">{c}</option>)}
+                        </select>
+                        {ep.country === 'Other' && (
+                          <input type="text" placeholder="Enter country name" value={customCountry}
+                            onChange={(e) => setCustomCountry(e.target.value)}
+                            className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
+                        )}
+                      </div>
+                    )}
 
                     {/* League — only for clubs */}
                     {showLeague && (
