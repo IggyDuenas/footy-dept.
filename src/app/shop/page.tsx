@@ -119,24 +119,24 @@ function ShopContent() {
   // Initialise filters from URL params on mount
   useEffect(() => {
     const initial: Filters = {}
-    const typeParam = searchParams.get('type')
+    const typeParam = searchParams.get('type')?.toLowerCase()
     if (typeParam && TYPES.some((t) => t.value === typeParam)) initial.type = typeParam
 
-    const leagueParam = searchParams.get('league')
+    const leagueParam = searchParams.get('league')?.toLowerCase()
     if (leagueParam) {
       const found = fromSlug(leagueParam, LEAGUES)
-      if (found) initial.league = found
+      if (found) initial.league = found.toLowerCase()
     }
 
-    const countryParam = searchParams.get('country')
+    const countryParam = searchParams.get('country')?.toLowerCase()
     if (countryParam) {
       const found = fromSlug(countryParam, COUNTRIES) ?? COUNTRIES.find(
-        (c) => c.toLowerCase() === countryParam.toLowerCase()
+        (c) => c.toLowerCase() === countryParam
       )
-      if (found) initial.country = found
+      if (found) initial.country = found.toLowerCase()
     }
 
-    const versionParam = searchParams.get('version')
+    const versionParam = searchParams.get('version')?.toLowerCase()
     if (versionParam === 'fan' || versionParam === 'player' || versionParam === 'retro') initial.version = versionParam
 
     const eraParam = searchParams.get('era')
@@ -151,10 +151,10 @@ function ShopContent() {
       setLoading(true)
       let query = supabase.from('products').select('*')
 
-      if (activeFilters.type)    query = query.eq('type', activeFilters.type)
-      if (activeFilters.league)  query = query.eq('league', activeFilters.league)
+      if (activeFilters.type)    query = query.ilike('type', activeFilters.type)
+      if (activeFilters.league)  query = query.ilike('league', activeFilters.league)
       if (activeFilters.country) query = query.ilike('country', activeFilters.country)
-      if (activeFilters.version) query = query.eq('version', activeFilters.version)
+      if (activeFilters.version) query = query.ilike('version', activeFilters.version)
       if (activeFilters.era) {
         const [min, max] = ERA_RANGES[activeFilters.era]
         query = query.gte('year', min).lte('year', max)

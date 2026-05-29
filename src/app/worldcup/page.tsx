@@ -112,7 +112,7 @@ export default function WorldCupPage() {
                 transition={{ duration: 0.4, delay: i * 0.025 }}
               >
                 <Link
-                  href={`/shop?type=national&country=${encodeURIComponent(nation.name)}`}
+                  href={`/shop?type=national&country=${encodeURIComponent(nation.name.toLowerCase())}`}
                   className="group flex flex-col items-center justify-center gap-3 bg-zinc-900 border border-white/5 p-6 hover:border-blue-500/60 hover:scale-[1.03] transition-all duration-200"
                 >
                   <span className="text-4xl leading-none">{nation.flag}</span>
