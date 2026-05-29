@@ -110,7 +110,7 @@ function ShopContent() {
       .eq('type', 'national')
       .neq('country', '')
       .then(({ data }) => {
-        const unique = [...new Set((data ?? []).map((r: { country: string }) => r.country))].sort()
+        const unique = Array.from(new Set((data ?? []).map((r: { country: string }) => r.country))).sort()
         setFilterCountries(unique)
       })
   }, [])
