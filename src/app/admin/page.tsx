@@ -77,6 +77,31 @@ export default function AdminPage() {
   const [editingBadge, setEditingBadge] = useState<Partial<Badge> | null>(null)
   const [showBadgeForm, setShowBadgeForm] = useState(false)
 
+  // Product table sort
+  type SortKey = 'name' | 'type' | 'country' | 'year' | 'price'
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; dir: 'asc' | 'desc' } | null>(null)
+
+  const toggleSort = (key: SortKey) => {
+    setSortConfig((prev) =>
+      prev?.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'year' ? 'desc' : 'asc' }
+    )
+  }
+
+  const sortedProducts = sortConfig
+    ? [...products].sort((a, b) => {
+        const { key, dir } = sortConfig
+        let cmp = 0
+        if (key === 'year' || key === 'price') {
+          cmp = (a[key] ?? 0) - (b[key] ?? 0)
+        } else {
+          cmp = String(a[key] ?? '').localeCompare(String(b[key] ?? ''))
+        }
+        return dir === 'asc' ? cmp : -cmp
+      })
+    : products
+
   // Tracking state
   const [trackingSearch, setTrackingSearch] = useState('')
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
@@ -706,13 +731,38 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10">
-                      {['Name', 'Type', 'Country', 'Year', 'Price', 'Inventory', 'Featured', 'Actions'].map((h) => (
-                        <th key={h} className="text-left text-white/40 text-xs tracking-widest uppercase pb-3 pr-4">{h}</th>
+                      {(
+                        [
+                          { label: 'Name',      key: 'name'    },
+                          { label: 'Type',      key: 'type'    },
+                          { label: 'Country',   key: 'country' },
+                          { label: 'Year',      key: 'year'    },
+                          { label: 'Price',     key: 'price'   },
+                          { label: 'Inventory', key: null      },
+                          { label: 'Featured',  key: null      },
+                          { label: 'Actions',   key: null      },
+                        ] as { label: string; key: SortKey | null }[]
+                      ).map(({ label, key }) => (
+                        <th key={label} className="text-left text-white/40 text-xs tracking-widest uppercase pb-3 pr-4">
+                          {key ? (
+                            <button
+                              onClick={() => toggleSort(key)}
+                              className="flex items-center gap-1 hover:text-white transition-colors"
+                            >
+                              {label}
+                              {sortConfig?.key === key ? (
+                                sortConfig.dir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />
+                              ) : (
+                                <span className="opacity-30"><ChevronDown size={11} /></span>
+                              )}
+                            </button>
+                          ) : label}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {products.map((p) => (
+                    {sortedProducts.map((p) => (
                       <tr key={p.id} className="hover:bg-white/2 transition-colors">
                         <td className="py-4 pr-4">
                           <div className="flex items-center gap-3">
