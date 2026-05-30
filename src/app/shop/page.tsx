@@ -56,6 +56,22 @@ const CONTINENT_MAP: Record<string, string> = {
 
 const CONTINENT_ORDER = ['Europe', 'Americas', 'Africa', 'Asia']
 
+function formatCountryName(country: string): string {
+  const specialCases: Record<string, string> = {
+    'usa': 'USA', 'uae': 'UAE', 'uk': 'UK',
+    'dr congo': 'DR Congo', 'ivory coast': 'Ivory Coast',
+    'south korea': 'South Korea', 'south africa': 'South Africa',
+    'saudi arabia': 'Saudi Arabia', 'costa rica': 'Costa Rica',
+    'el salvador': 'El Salvador', 'north macedonia': 'North Macedonia',
+    'trinidad and tobago': 'Trinidad and Tobago',
+    'bosnia and herzegovina': 'Bosnia and Herzegovina',
+    'cape verde': 'Cape Verde', 'burkina faso': 'Burkina Faso',
+  }
+  const lower = country.toLowerCase()
+  if (specialCases[lower]) return specialCases[lower]
+  return lower.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 // Lowercase-keyed version for matching against lowercase DB values
 const CONTINENT_MAP_LOWER: Record<string, string> = Object.fromEntries(
   Object.entries(CONTINENT_MAP).map(([k, v]) => [k.toLowerCase(), v])
@@ -98,13 +114,13 @@ function ShopContent() {
   useEffect(() => {
     supabase
       .from('products')
-      .select('country')
-      .eq('type', 'national')
+      .select('country, type')
       .neq('country', '')
       .then(({ data }) => {
-        const unique = Array.from(
-          new Set((data ?? []).map((r: { country: string }) => r.country.toLowerCase()))
-        ).sort()
+        const nationalCountries = (data ?? [])
+          .filter((r: { country: string; type: string }) => r.type?.toLowerCase() === 'national')
+          .map((r: { country: string }) => r.country.toLowerCase())
+        const unique = Array.from(new Set(nationalCountries)).sort()
         setFilterCountries(unique)
       })
   }, [])
@@ -188,8 +204,17 @@ function ShopContent() {
   const toggleFilter = (key: keyof Omit<Filters, 'type'>, value: string) => {
     setActiveFilters((prev) => {
       const next = { ...prev }
-      if (next[key] === value) delete next[key]
-      else next[key] = value
+      if (next[key] === value) {
+        delete next[key]
+        // If deselecting the last country/league, also clear the locked type
+        if (key === 'country') delete next.type
+        if (key === 'league') delete next.type
+      } else {
+        next[key] = value
+        // Lock type when a country or league is selected
+        if (key === 'country') next.type = 'national'
+        if (key === 'league') next.type = 'club'
+      }
       return next
     })
   }
@@ -200,6 +225,8 @@ function ShopContent() {
   // Pill display label
   const pillLabel = (key: string, val: string) => {
     if (key === 'type') return TYPES.find((t) => t.value === val)?.label ?? val
+    if (key === 'country') return formatCountryName(val)
+    if (key === 'league') return val.charAt(0).toUpperCase() + val.slice(1)
     return val
   }
 
@@ -347,7 +374,7 @@ function ShopContent() {
                                 activeFilters.country === country ? 'text-blue-400' : 'text-white/50 hover:text-white'
                               }`}
                             >
-                              {country.charAt(0).toUpperCase() + country.slice(1)}
+                              {formatCountryName(country)}
                             </button>
                           ))}
                         </div>
