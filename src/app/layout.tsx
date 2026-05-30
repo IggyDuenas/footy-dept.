@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
+import { Analytics } from '@vercel/analytics/next'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
 import { BannerProvider } from '@/context/BannerContext'
 
@@ -41,6 +42,7 @@ export default function RootLayout({
           }}
         />
         </BannerProvider>
+        <Analytics />
       </body>
     </html>
   )

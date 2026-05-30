@@ -168,10 +168,10 @@ function ShopContent() {
       setLoading(true)
       let query = supabase.from('products').select('*')
 
-      if (activeFilters.type)    query = query.ilike('type', activeFilters.type)
-      if (activeFilters.league)  query = query.ilike('league', activeFilters.league)
-      if (activeFilters.country) query = query.ilike('country', activeFilters.country)
-      if (activeFilters.version) query = query.ilike('version', activeFilters.version)
+      if (activeFilters.type)    query = query.eq('type', activeFilters.type)
+      if (activeFilters.league)  query = query.eq('league', activeFilters.league)
+      if (activeFilters.country) query = query.eq('country', activeFilters.country)
+      if (activeFilters.version) query = query.eq('version', activeFilters.version)
       if (activeFilters.era) {
         const [min, max] = ERA_RANGES[activeFilters.era]
         query = query.gte('year', min).lte('year', max)
