@@ -49,7 +49,7 @@ export default function RetroCollection() {
                 From Wembley &apos;66 to the Maracanã. Our retro collection brings back the kits that defined eras and inspired generations.
               </p>
               <Link
-                href="/shop?version=retro"
+                href="/shop"
                 className="inline-block px-10 py-4 border border-white/30 text-white font-black text-sm tracking-widest uppercase hover:border-white hover:bg-white hover:text-black transition-all duration-300 mb-12"
               >
                 Shop Retro

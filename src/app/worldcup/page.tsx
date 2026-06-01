@@ -51,7 +51,7 @@ export default function WorldCupPage() {
               Built for Matchday. Built for This.
             </p>
             <Link
-              href="/shop?type=national"
+              href="/shop"
               className="inline-block bg-white text-black font-black text-sm tracking-widest uppercase px-12 py-5 hover:bg-blue-500 hover:text-white transition-colors duration-300"
             >
               Shop All National Kits
@@ -112,7 +112,7 @@ export default function WorldCupPage() {
                 transition={{ duration: 0.4, delay: i * 0.025 }}
               >
                 <Link
-                  href={`/shop?type=national&country=${encodeURIComponent(nation.name.toLowerCase())}`}
+                  href="/shop"
                   className="group flex flex-col items-center justify-center gap-3 bg-zinc-900 border border-white/5 p-6 hover:border-blue-500/60 hover:scale-[1.03] transition-all duration-200"
                 >
                   <span className="text-4xl leading-none">{nation.flag}</span>

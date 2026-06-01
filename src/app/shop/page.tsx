@@ -1,9 +1,7 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { SlidersHorizontal, X } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import CartDrawer from '@/components/CartDrawer'
 import SearchModal from '@/components/SearchModal'
@@ -11,121 +9,106 @@ import ProductCard from '@/components/ProductCard'
 import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabase'
 import { Product } from '@/types'
-import { mixedSort } from '@/lib/sortProducts'
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const TYPES = [
-  { value: 'club',     label: 'Clubs' },
-  { value: 'national', label: 'National Teams' },
-]
-
-// Maps every country name → its continent for the dynamic filter
-const CONTINENT_MAP: Record<string, string> = {
-  // Europe
-  England: 'Europe', France: 'Europe', Germany: 'Europe', Spain: 'Europe',
-  Italy: 'Europe', Portugal: 'Europe', Netherlands: 'Europe', Belgium: 'Europe',
-  Croatia: 'Europe', Norway: 'Europe', Sweden: 'Europe', Denmark: 'Europe',
-  Switzerland: 'Europe', Austria: 'Europe', Scotland: 'Europe', Wales: 'Europe',
-  Ireland: 'Europe', Greece: 'Europe', Turkey: 'Europe', Ukraine: 'Europe',
-  Poland: 'Europe', Serbia: 'Europe', Hungary: 'Europe', Romania: 'Europe',
-  Slovakia: 'Europe', Albania: 'Europe', Slovenia: 'Europe', Finland: 'Europe',
-  Iceland: 'Europe', Georgia: 'Europe', Russia: 'Europe', 'Czech Republic': 'Europe',
-  'North Macedonia': 'Europe', 'Bosnia and Herzegovina': 'Europe', Montenegro: 'Europe',
-  // Americas
-  Brazil: 'Americas', Argentina: 'Americas', USA: 'Americas', Mexico: 'Americas',
-  Uruguay: 'Americas', Colombia: 'Americas', Chile: 'Americas', Ecuador: 'Americas',
-  Peru: 'Americas', Bolivia: 'Americas', Venezuela: 'Americas', Paraguay: 'Americas',
-  Canada: 'Americas', Jamaica: 'Americas', 'Costa Rica': 'Americas',
-  Honduras: 'Americas', Panama: 'Americas', 'El Salvador': 'Americas',
-  Guatemala: 'Americas', 'Trinidad and Tobago': 'Americas',
-  // Africa
-  Morocco: 'Africa', Nigeria: 'Africa', Senegal: 'Africa', Cameroon: 'Africa',
-  Ghana: 'Africa', Egypt: 'Africa', Algeria: 'Africa', Tunisia: 'Africa',
-  'Ivory Coast': 'Africa', 'South Africa': 'Africa', Mali: 'Africa',
-  'DR Congo': 'Africa', Ethiopia: 'Africa', Kenya: 'Africa', Zambia: 'Africa',
-  Zimbabwe: 'Africa', Angola: 'Africa', Uganda: 'Africa', Guinea: 'Africa',
-  'Burkina Faso': 'Africa', 'Cape Verde': 'Africa', Gabon: 'Africa',
-  // Asia / Oceania
-  Japan: 'Asia', 'South Korea': 'Asia', 'Saudi Arabia': 'Asia', Iran: 'Asia',
-  Australia: 'Asia', Qatar: 'Asia', UAE: 'Asia', China: 'Asia',
-  India: 'Asia', Iraq: 'Asia', Jordan: 'Asia', Bahrain: 'Asia',
-  Kuwait: 'Asia', Oman: 'Asia', Thailand: 'Asia', Vietnam: 'Asia',
-  Indonesia: 'Asia', Uzbekistan: 'Asia', Kazakhstan: 'Asia',
-}
-
-const CONTINENT_ORDER = ['Europe', 'Americas', 'Africa', 'Asia']
 
 function formatCountryName(country: string): string {
-  const specialCases: Record<string, string> = {
-    'usa': 'USA', 'uae': 'UAE', 'uk': 'UK',
-    'dr congo': 'DR Congo', 'ivory coast': 'Ivory Coast',
-    'south korea': 'South Korea', 'south africa': 'South Africa',
-    'saudi arabia': 'Saudi Arabia', 'costa rica': 'Costa Rica',
-    'el salvador': 'El Salvador', 'north macedonia': 'North Macedonia',
-    'trinidad and tobago': 'Trinidad and Tobago',
-    'bosnia and herzegovina': 'Bosnia and Herzegovina',
-    'cape verde': 'Cape Verde', 'burkina faso': 'Burkina Faso',
+  const special: Record<string, string> = {
+    'usa': 'USA',
+    'uae': 'UAE',
+    'uk': 'UK',
   }
-  const lower = country.toLowerCase()
-  if (specialCases[lower]) return specialCases[lower]
-  return lower.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  if (special[country.toLowerCase()]) return special[country.toLowerCase()]
+  return country
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 }
 
-// Lowercase-keyed version for matching against lowercase DB values
-const CONTINENT_MAP_LOWER: Record<string, string> = Object.fromEntries(
-  Object.entries(CONTINENT_MAP).map(([k, v]) => [k.toLowerCase(), v])
-)
-
-const ERAS = ['2020s', '2010s', '2000s', '1990s', '1980s', '1970s']
-
-const ERA_RANGES: Record<string, [number, number]> = {
-  '2020s': [2020, 2029],
-  '2010s': [2010, 2019],
-  '2000s': [2000, 2009],
-  '1990s': [1990, 1999],
-  '1980s': [1980, 1989],
-  '1970s': [1970, 1979],
-}
-
-// ─── Filter state type ─────────────────────────────────────────────────────────
-
-interface Filters {
-  type?: string
-  league?: string
-  country?: string
-  version?: string
-  era?: string
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
-function ShopContent() {
-  const searchParams = useSearchParams()
+export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [activeFilters, setActiveFilters] = useState<Filters>({})
-  const [filterCountries, setFilterCountries] = useState<string[]>([])
+  const [availableCountries, setAvailableCountries] = useState<string[]>([])
   const [availableLeagues, setAvailableLeagues] = useState<string[]>([])
 
-  // Fetch distinct national countries once for the filter sidebar
+  const [filters, setFilters] = useState({
+    type: '',
+    country: '',
+    league: '',
+    version: '',
+    era: '',
+  })
+
+  const setFilter = (key: string, value: string) => {
+    setFilters(prev => {
+      const prevRecord = prev as Record<string, string>
+      const next = { ...prev, [key]: prevRecord[key] === value ? '' : value }
+      if (key === 'type') {
+        next.country = ''
+        next.league = ''
+      }
+      return next
+    })
+  }
+
+  // Fetch products whenever filters change
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true)
+
+      let query = supabase.from('products').select('*')
+
+      if (filters.type !== '') {
+        query = query.eq('type', filters.type)
+      }
+
+      if (filters.type === 'national' && filters.country !== '') {
+        query = query.eq('country', filters.country)
+      }
+
+      if (filters.type === 'club' && filters.league !== '') {
+        query = query.eq('league', filters.league)
+      }
+
+      if (filters.version !== '') {
+        query = query.eq('version', filters.version)
+      }
+
+      if (filters.era !== '') {
+        const decade = parseInt(filters.era)
+        query = query.gte('year', decade).lte('year', decade + 9)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Filter query error:', error)
+        setProducts([])
+      } else {
+        setProducts(data ?? [])
+      }
+
+      setLoading(false)
+    }
+
+    fetchProducts()
+  }, [filters])
+
+  // Fetch countries that have at least one national team product
   useEffect(() => {
     supabase
       .from('products')
-      .select('country, type')
+      .select('country')
+      .eq('type', 'national')
       .neq('country', '')
       .then(({ data }) => {
-        const nationalCountries = (data ?? [])
-          .filter((r: { country: string; type: string }) => r.type?.toLowerCase() === 'national')
-          .map((r: { country: string }) => r.country.toLowerCase())
-        const unique = Array.from(new Set(nationalCountries)).sort()
-        setFilterCountries(unique)
+        const unique = Array.from(
+          new Set((data ?? []).map((r: any) => r.country))
+        ).sort() as string[]
+        setAvailableCountries(unique)
       })
   }, [])
 
-  // Fetch distinct club leagues once for the filter sidebar
+  // Fetch leagues that have at least one club product
   useEffect(() => {
     supabase
       .from('products')
@@ -135,100 +118,11 @@ function ShopContent() {
       .neq('league', '')
       .then(({ data }) => {
         const unique = Array.from(
-          new Set((data ?? []).map((r: { league: string }) => r.league.toLowerCase()))
-        ).sort()
+          new Set((data ?? []).map((r: any) => r.league))
+        ).sort() as string[]
         setAvailableLeagues(unique)
       })
   }, [])
-
-  // Initialise filters from URL params on mount
-  useEffect(() => {
-    const initial: Filters = {}
-    const typeParam = searchParams.get('type')?.toLowerCase()
-    if (typeParam && TYPES.some((t) => t.value === typeParam)) initial.type = typeParam
-
-    const leagueParam = searchParams.get('league')?.toLowerCase()
-    if (leagueParam) initial.league = leagueParam
-
-    const countryParam = searchParams.get('country')?.toLowerCase()
-    if (countryParam) initial.country = countryParam
-
-    const versionParam = searchParams.get('version')?.toLowerCase()
-    if (versionParam === 'fan' || versionParam === 'player' || versionParam === 'retro') initial.version = versionParam
-
-    const eraParam = searchParams.get('era')
-    if (eraParam && ERA_RANGES[eraParam]) initial.era = eraParam
-
-    setActiveFilters(initial)
-  }, [searchParams])
-
-  // Fetch products whenever filters change
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true)
-      let query = supabase.from('products').select('*')
-
-      if (activeFilters.type)    query = query.eq('type', activeFilters.type)
-      if (activeFilters.league)  query = query.eq('league', activeFilters.league)
-      if (activeFilters.country) query = query.eq('country', activeFilters.country)
-      if (activeFilters.version) query = query.eq('version', activeFilters.version)
-      if (activeFilters.era) {
-        const [min, max] = ERA_RANGES[activeFilters.era]
-        query = query.gte('year', min).lte('year', max)
-      }
-
-      const { data } = await query
-      setProducts(mixedSort(data ?? []))
-      setLoading(false)
-    }
-    fetchProducts()
-  }, [activeFilters])
-
-  // When type changes, clear filters that no longer apply
-  const setType = (value: string) => {
-    setActiveFilters((prev) => {
-      if (prev.type === value) {
-        // deselect
-        const { type: _t, league: _l, country: _c, version: _v, ...rest } = prev
-        return rest
-      }
-      const next: Filters = { ...prev, type: value }
-      // clear league when not club
-      if (value !== 'club') delete next.league
-      // clear country when not national
-      if (value !== 'national') delete next.country
-      return next
-    })
-  }
-
-  const toggleFilter = (key: keyof Omit<Filters, 'type'>, value: string) => {
-    setActiveFilters((prev) => {
-      const next = { ...prev }
-      if (next[key] === value) {
-        delete next[key]
-        // If deselecting the last country/league, also clear the locked type
-        if (key === 'country') delete next.type
-        if (key === 'league') delete next.type
-      } else {
-        next[key] = value
-        // Lock type when a country or league is selected
-        if (key === 'country') next.type = 'national'
-        if (key === 'league') next.type = 'club'
-      }
-      return next
-    })
-  }
-
-  const activeCount = Object.keys(activeFilters).length
-  const activeType = activeFilters.type
-
-  // Pill display label
-  const pillLabel = (key: string, val: string) => {
-    if (key === 'type') return TYPES.find((t) => t.value === val)?.label ?? val
-    if (key === 'country') return formatCountryName(val)
-    if (key === 'league') return val.charAt(0).toUpperCase() + val.slice(1)
-    return val
-  }
 
   return (
     <main>
@@ -249,183 +143,117 @@ function ShopContent() {
 
         <div className="max-w-[1400px] mx-auto px-6 py-8">
           {/* Filter bar */}
-          <div className="flex items-center gap-4 mb-8 flex-wrap">
-            <button
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              className="flex items-center gap-2 border border-white/20 text-white/60 hover:text-white hover:border-white/40 px-4 py-2 text-sm tracking-wider uppercase transition-colors"
-            >
-              <SlidersHorizontal size={14} />
-              Filters
-              {activeCount > 0 && (
-                <span className="bg-blue-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                  {activeCount}
-                </span>
-              )}
-            </button>
+          <div className="mb-8">
+            {/* ROW 1 — type pills + product count */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap">
+                {['club', 'national', 'mystery'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setFilter('type', type)}
+                    className={`px-4 py-2 text-xs font-bold tracking-widest uppercase border transition-colors ${
+                      filters.type === type
+                        ? 'bg-white text-black border-white'
+                        : 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'
+                    }`}
+                  >
+                    {type === 'club' ? 'Clubs' : type === 'national' ? 'National Teams' : 'Mystery Box'}
+                  </button>
+                ))}
+                {Object.values(filters).some(v => v !== '') && (
+                  <button
+                    onClick={() => setFilters({ type: '', country: '', league: '', version: '', era: '' })}
+                    className="px-4 py-2 text-xs text-white/30 hover:text-white transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <span className="ml-auto text-white/30 text-sm">{products.length} products</span>
+            </div>
 
-            {/* Active filter pills */}
-            {Object.entries(activeFilters).map(([key, val]) => (
-              <button
-                key={key}
-                onClick={() =>
-                  key === 'type'
-                    ? setType(val)
-                    : toggleFilter(key as keyof Omit<Filters, 'type'>, val)
-                }
-                className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 px-3 py-1.5 text-xs tracking-wider uppercase"
-              >
-                {pillLabel(key, val)}
-                <X size={10} />
-              </button>
-            ))}
-
-            {activeCount > 0 && (
-              <button
-                onClick={() => setActiveFilters({})}
-                className="text-white/30 text-xs hover:text-white/60 transition-colors"
-              >
-                Clear all
-              </button>
+            {/* ROW 2 — conditional sub-filters */}
+            {filters.type === 'national' && (
+              <div className="flex gap-2 flex-wrap mt-3">
+                <span className="text-white/30 text-xs uppercase tracking-widest self-center mr-2">Country:</span>
+                {availableCountries.map(country => (
+                  <button
+                    key={country}
+                    onClick={() => setFilter('country', country)}
+                    className={`px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                      filters.country === country
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'border-white/20 text-white/50 hover:border-white/40 hover:text-white'
+                    }`}
+                  >
+                    {formatCountryName(country)}
+                  </button>
+                ))}
+              </div>
             )}
 
-            <span className="ml-auto text-white/30 text-sm">{products.length} products</span>
+            {filters.type === 'club' && (
+              <div className="flex gap-2 flex-wrap mt-3">
+                <span className="text-white/30 text-xs uppercase tracking-widest self-center mr-2">League:</span>
+                {availableLeagues.map(league => (
+                  <button
+                    key={league}
+                    onClick={() => setFilter('league', league)}
+                    className={`px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                      filters.league === league
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'border-white/20 text-white/50 hover:border-white/40 hover:text-white'
+                    }`}
+                  >
+                    {league.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ROW 3 — version and era */}
+            <div className="flex gap-6 flex-wrap mt-3">
+              <div className="flex gap-2 items-center flex-wrap">
+                <span className="text-white/30 text-xs uppercase tracking-widest mr-2">Version:</span>
+                {['fan', 'player', 'retro'].map(version => (
+                  <button
+                    key={version}
+                    onClick={() => setFilter('version', version)}
+                    className={`px-4 py-2 text-xs font-bold tracking-widest uppercase border transition-colors ${
+                      filters.version === version
+                        ? 'bg-white text-black border-white'
+                        : 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'
+                    }`}
+                  >
+                    {version.charAt(0).toUpperCase() + version.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2 items-center flex-wrap">
+                <span className="text-white/30 text-xs uppercase tracking-widest mr-2">Era:</span>
+                {[
+                  { value: '2020', label: '2020s' },
+                  { value: '2010', label: '2010s' },
+                  { value: '2000', label: '2000s' },
+                  { value: '1990', label: '1990s' },
+                  { value: '1980', label: '1980s' },
+                  { value: '1970', label: '1970s' },
+                ].map(era => (
+                  <button
+                    key={era.value}
+                    onClick={() => setFilter('era', era.value)}
+                    className={`px-4 py-2 text-xs font-bold tracking-widest uppercase border transition-colors ${
+                      filters.era === era.value
+                        ? 'bg-white text-black border-white'
+                        : 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'
+                    }`}
+                  >
+                    {era.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-
-          {/* Filter panel */}
-          {filtersOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="mb-8 border border-white/10 p-6 grid grid-cols-2 md:grid-cols-4 gap-6"
-            >
-              {/* TYPE — always visible */}
-              <div>
-                <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Type</p>
-                <div className="flex flex-col gap-2">
-                  {TYPES.map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setType(value)}
-                      className={`text-left text-sm transition-colors ${
-                        activeFilters.type === value ? 'text-blue-400' : 'text-white/50 hover:text-white'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* LEAGUE — only when type === 'club' */}
-              {activeType === 'club' && (
-                <div>
-                  <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">League</p>
-                  <div className="flex flex-col gap-2">
-                    {availableLeagues.length === 0 ? (
-                      <p className="text-white/20 text-xs">No options available</p>
-                    ) : availableLeagues.map((league) => (
-                      <button
-                        key={league}
-                        onClick={() => toggleFilter('league', league)}
-                        className={`text-left text-sm transition-colors ${
-                          activeFilters.league === league ? 'text-blue-400' : 'text-white/50 hover:text-white'
-                        }`}
-                      >
-                        {league.charAt(0).toUpperCase() + league.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* COUNTRY — only when type === 'national' */}
-              {activeType === 'national' && (() => {
-                if (filterCountries.length === 0) {
-                  return (
-                    <div>
-                      <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Country</p>
-                      <p className="text-white/20 text-xs">No options available</p>
-                    </div>
-                  )
-                }
-                // Group lowercase country values by continent
-                const grouped: Record<string, string[]> = {}
-                filterCountries.forEach((c) => {
-                  const continent = CONTINENT_MAP_LOWER[c] ?? 'Other'
-                  ;(grouped[continent] ??= []).push(c)
-                })
-                const sections = [
-                  ...CONTINENT_ORDER.filter((c) => grouped[c]).map((c) => ({ label: c, countries: grouped[c] })),
-                  ...(grouped['Other'] ? [{ label: 'Other', countries: grouped['Other'] }] : []),
-                ]
-                return (
-                  <div>
-                    <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Country</p>
-                    <div className="flex flex-col">
-                      {sections.map((region) => (
-                        <div key={region.label} className="mb-4">
-                          <p className="text-white/20 text-[9px] tracking-widest uppercase mb-2">{region.label}</p>
-                          {region.countries.map((country) => (
-                            <button
-                              key={country}
-                              onClick={() => toggleFilter('country', country)}
-                              className={`block text-left text-sm transition-colors mb-2 ${
-                                activeFilters.country === country ? 'text-blue-400' : 'text-white/50 hover:text-white'
-                              }`}
-                            >
-                              {formatCountryName(country)}
-                            </button>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {/* VERSION */}
-              {(
-                <div>
-                  <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Version</p>
-                  <div className="flex flex-col gap-2">
-                    {[
-                      { value: 'fan',   label: 'Fan' },
-                      { value: 'retro', label: 'Retro' },
-                    ].map(({ value, label }) => (
-                      <button
-                        key={value}
-                        onClick={() => toggleFilter('version', value)}
-                        className={`text-left text-sm transition-colors ${
-                          activeFilters.version === value ? 'text-blue-400' : 'text-white/50 hover:text-white'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ERA — always visible */}
-              <div>
-                <p className="text-white/40 text-[10px] tracking-widest uppercase mb-3">Era</p>
-                <div className="flex flex-col gap-2">
-                  {ERAS.map((era) => (
-                    <button
-                      key={era}
-                      onClick={() => toggleFilter('era', era)}
-                      className={`text-left text-sm transition-colors ${
-                        activeFilters.era === era ? 'text-blue-400' : 'text-white/50 hover:text-white'
-                      }`}
-                    >
-                      {era}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
 
           {/* Product grid */}
           {loading ? (
@@ -438,8 +266,8 @@ function ShopContent() {
             <div className="text-center py-24">
               <p className="text-white/30 text-lg">No products found.</p>
               <button
-                onClick={() => setActiveFilters({})}
-                className="mt-4 text-blue-400 text-sm hover:text-blue-300 underline underline-offset-4"
+                onClick={() => setFilters({ type: '', country: '', league: '', version: '', era: '' })}
+                className="mt-4 text-blue-400 text-sm hover:text-blue-300"
               >
                 Clear filters
               </button>
@@ -463,13 +291,5 @@ function ShopContent() {
 
       <Footer />
     </main>
-  )
-}
-
-export default function ShopPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-black" />}>
-      <ShopContent />
-    </Suspense>
   )
 }

@@ -61,13 +61,13 @@ export default function Hero() {
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
           <Link
-            href="/shop?category=jersey"
+            href="/shop"
             className="px-10 py-4 bg-white text-black font-black text-sm tracking-widest uppercase hover:bg-blue-500 hover:text-white transition-all duration-300"
           >
             Shop Jerseys
           </Link>
           <Link
-            href="/shop?category=retro"
+            href="/shop"
             className="px-10 py-4 border border-white/30 text-white font-black text-sm tracking-widest uppercase hover:border-white hover:bg-white/10 transition-all duration-300"
           >
             Retro Collection

@@ -2,9 +2,9 @@ import Link from 'next/link'
 
 const links = {
   Shop: [
-    { label: 'Clubs', href: '/shop?type=club' },
-    { label: 'Retro Collection', href: '/shop?version=retro' },
-    { label: 'National Teams', href: '/shop?type=national' },
+    { label: 'Clubs', href: '/shop' },
+    { label: 'Retro Collection', href: '/shop' },
+    { label: 'National Teams', href: '/shop' },
   ],
   Support: [
     { label: 'Track Order', href: '/track' },
