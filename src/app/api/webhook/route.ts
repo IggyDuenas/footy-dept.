@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       const rawItems = session.metadata?.items
       if (!rawItems) throw new Error('No items metadata')
 
+      // Expand minified keys back to full names
       const items: Array<{
         product_id: string
         quantity: number
@@ -39,7 +40,16 @@ export async function POST(req: NextRequest) {
         custom_number: number | null
         selected_badges: Array<{ badge_id: string; name: string; price: number }>
         customization_total: number
-      }> = JSON.parse(rawItems)
+      }> = JSON.parse(rawItems).map((min: Record<string, unknown>) => ({
+        product_id: min.p,
+        quantity: min.q,
+        size: min.s,
+        unit_price: min.u,
+        custom_name: min.n ?? null,
+        custom_number: min.num ?? null,
+        selected_badges: min.b ?? [],
+        customization_total: min.ct ?? 0,
+      }))
 
       const shippingAddress = (
         session as Stripe.Checkout.Session & {

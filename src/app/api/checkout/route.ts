@@ -11,14 +11,10 @@ export async function POST(req: NextRequest) {
     }
 
     const lineItems = items.map((item) => {
-      // Build description with customization details
+      // Build description — only include customizations that exist
       const descParts: string[] = [`Size: ${item.size}`]
-      if (item.customName || item.customNumber != null) {
-        descParts.push(`Name: ${item.customName || ''} ${item.customNumber ?? ''}`.trim())
-      }
-      if (item.selectedBadges && item.selectedBadges.length > 0) {
-        descParts.push(`Badges: ${item.selectedBadges.map((b) => b.name).join(', ')}`)
-      }
+      if (item.customName) descParts.push(`Name: ${item.customName} ${item.customNumber ?? ''}`.trim())
+      if (item.selectedBadges?.length > 0) descParts.push(`Badges: ${item.selectedBadges.map((b: { name: string }) => b.name).join(', ')}`)
 
       return {
         price_data: {
@@ -82,27 +78,38 @@ export async function POST(req: NextRequest) {
           },
         },
       ],
-      // Snapshot all customization data so the webhook can persist it accurately
-      metadata: {
-        items: JSON.stringify(
-          items.map((i) => ({
-            product_id: i.product.id,
-            quantity: i.quantity,
-            size: i.size,
-            unit_price: i.product.price,
-            custom_name: i.customName || null,
-            custom_number: i.customNumber ?? null,
-            // Badge snapshot: prices locked at order time so historical orders are stable
-            selected_badges: i.selectedBadges || [],
-            customization_total: i.customizationTotal || 0,
-          }))
-        ),
-      },
+      // Snapshot customization data — minified keys to stay under Stripe's 500-char metadata limit
+      metadata: (() => {
+        const minifiedItems = items.map((item) => {
+          const min: Record<string, unknown> = {
+            p: item.product.id,
+            q: item.quantity,
+            s: item.size,
+            u: item.product.price,
+          }
+          if (item.customName) min.n = item.customName
+          if (item.customNumber != null) min.num = item.customNumber
+          if (item.selectedBadges && item.selectedBadges.length > 0) min.b = item.selectedBadges
+          if (item.customizationTotal && item.customizationTotal > 0) min.ct = item.customizationTotal
+          return min
+        })
+        const itemsString = JSON.stringify(minifiedItems)
+        if (itemsString.length > 490) {
+          throw new Error('CART_TOO_LARGE')
+        }
+        return { items: itemsString }
+      })(),
     })
 
     return NextResponse.json({ url: session.url })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
+    if (message === 'CART_TOO_LARGE') {
+      return NextResponse.json(
+        { error: 'Cart is too large for checkout. Please reduce the number of items and try again.' },
+        { status: 400 }
+      )
+    }
     console.error('Stripe checkout error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }

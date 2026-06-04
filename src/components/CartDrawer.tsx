@@ -62,11 +62,15 @@ export default function CartDrawer() {
         }),
       })
       const data = await res.json()
+      if (!res.ok) {
+        setCheckoutError(data.error ?? 'Checkout failed. Please try again.')
+        return
+      }
       if (data.url) {
         closeCart()
         window.location.href = data.url
       } else {
-        setCheckoutError(data.error || 'Something went wrong. Please try again.')
+        setCheckoutError('Something went wrong. Please try again.')
       }
     } catch (err) {
       console.error('Checkout error:', err)
