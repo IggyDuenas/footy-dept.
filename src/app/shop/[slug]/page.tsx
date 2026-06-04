@@ -12,6 +12,7 @@ import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabase'
 import { Product, Badge } from '@/types'
 import { useCartStore } from '@/store/cartStore'
+import { getDiscountPercent, applyDiscount } from '@/lib/volumeDiscount'
 import toast from 'react-hot-toast'
 
 const accordions = [
@@ -40,7 +41,9 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
 
   const sizeGuideRef = useRef<HTMLDivElement>(null)
   const { addItem, itemCount } = useCartStore()
-  const atLimit = itemCount() >= 10
+  const cartCount = itemCount()
+  const atLimit = cartCount >= 10
+  const cartDiscount = getDiscountPercent(cartCount)
 
   // ── Fetch product + its badges ─────────────────────────────────────────────
   useEffect(() => {
@@ -122,7 +125,8 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
     return total
   })()
 
-  const lineTotal = (product.price + customizationTotal) * quantity
+  const displayPrice = applyDiscount(product.price, cartDiscount)
+  const lineTotal = (displayPrice + customizationTotal) * quantity
 
   const outOfStock = product.inventory === 0
 
@@ -247,16 +251,28 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
               {/* Price */}
               <div className="mb-6">
                 <div className="flex items-center gap-4">
-                  <span className="text-3xl font-black text-white">${product.price.toFixed(2)}</span>
-                  {product.compare_at_price && (
+                  {cartDiscount > 0 ? (
+                    <>
+                      <span className="text-3xl font-black text-white">${displayPrice.toFixed(2)}</span>
+                      <span className="text-white/30 text-xl line-through">${product.price.toFixed(2)}</span>
+                    </>
+                  ) : (
+                    <span className="text-3xl font-black text-white">${product.price.toFixed(2)}</span>
+                  )}
+                  {product.compare_at_price && !cartDiscount && (
                     <span className="text-white/30 text-xl line-through">${product.compare_at_price.toFixed(2)}</span>
                   )}
-                  {discount && (
+                  {discount && !cartDiscount && (
                     <span className="text-blue-400 text-sm font-bold">
                       Save ${(product.compare_at_price! - product.price).toFixed(2)}
                     </span>
                   )}
                 </div>
+                {cartDiscount > 0 && (
+                  <p className="text-green-400 text-sm font-semibold mt-1">
+                    {cartDiscount}% volume discount active — price reflects your cart discount
+                  </p>
+                )}
                 {customizationTotal > 0 && (
                   <p className="text-white/40 text-sm mt-1">
                     + ${customizationTotal.toFixed(2)} customizations

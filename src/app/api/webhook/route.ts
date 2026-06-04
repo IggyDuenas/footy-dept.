@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         product_id: min.p,
         quantity: min.q,
         size: min.s,
-        unit_price: min.u,
+        unit_price: (min.dp as number | undefined) ?? min.u,
         custom_name: min.n ?? null,
         custom_number: min.num ?? null,
         selected_badges: min.b ?? [],

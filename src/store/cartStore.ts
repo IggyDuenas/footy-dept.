@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Badge, CartItem, Product } from '@/types'
+import { getDiscountPercent, calcCartTotals } from '@/lib/volumeDiscount'
 
 interface AddItemOptions {
   size: string
@@ -25,6 +26,8 @@ interface CartStore {
   toggleCart: () => void
   total: () => number
   itemCount: () => number
+  discountPercent: () => number
+  savings: () => number
 }
 
 function buildCartKey(
@@ -107,14 +110,26 @@ export const useCartStore = create<CartStore>()(
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set((s) => ({ isOpen: !s.isOpen })),
 
-      total: () =>
-        get().items.reduce(
-          (sum, i) => sum + (i.product.price + (i.customizationTotal || 0)) * i.quantity,
-          0
-        ),
+      total: () => {
+        const items = get().items
+        const totalItems = get().itemCount()
+        const dp = getDiscountPercent(totalItems)
+        const { finalTotal } = calcCartTotals(items, dp)
+        return finalTotal
+      },
 
       itemCount: () =>
         get().items.reduce((sum, i) => sum + i.quantity, 0),
+
+      discountPercent: () => getDiscountPercent(get().itemCount()),
+
+      savings: () => {
+        const items = get().items
+        const totalItems = get().itemCount()
+        const dp = getDiscountPercent(totalItems)
+        const { savings } = calcCartTotals(items, dp)
+        return savings
+      },
     }),
     {
       name: 'footy-dept-cart',

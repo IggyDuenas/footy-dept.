@@ -5,9 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Minus, Plus, ShoppingBag, Tag, ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 import { useCartStore } from '@/store/cartStore'
+import { getNextTier, applyDiscount } from '@/lib/volumeDiscount'
 
 export default function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, total, itemCount } = useCartStore()
+  const { items, isOpen, closeCart, removeItem, updateQuantity, total, itemCount, discountPercent, savings } = useCartStore()
+  const count = itemCount()
+  const discount = discountPercent()
+  const savedAmount = savings()
+  const nextTier = getNextTier(count)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
@@ -114,6 +119,46 @@ export default function CartDrawer() {
               </button>
             </div>
 
+            {/* Volume discount progress */}
+            {items.length > 0 && (
+              <div className="px-6 py-3 border-b border-white/10">
+                {discount > 0 ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-green-400 text-xs font-bold tracking-wider uppercase">
+                      {discount}% off applied
+                    </span>
+                    {nextTier && (
+                      <span className="text-white/40 text-xs">
+                        Add {nextTier.itemsNeeded} more → {nextTier.nextPercent}% off
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/40 text-xs">
+                      Add {3 - count > 0 ? 3 - count : 0} more jersey{3 - count !== 1 ? 's' : ''} for 5% off each
+                    </span>
+                  </div>
+                )}
+                <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min((count / 10) * 100, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1">
+                  {[3, 5, 7, 10].map(milestone => (
+                    <span
+                      key={milestone}
+                      className={`text-[10px] ${count >= milestone ? 'text-blue-400' : 'text-white/20'}`}
+                    >
+                      {milestone}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Items */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
               {items.length === 0 ? (
@@ -131,7 +176,9 @@ export default function CartDrawer() {
                 <div className="flex flex-col gap-5">
                   <AnimatePresence>
                     {items.map((item) => {
-                      const linePrice = (item.product.price + (item.customizationTotal || 0)) * item.quantity
+                      const discountedUnitPrice = applyDiscount(item.product.price, discount)
+                      const linePrice = (discountedUnitPrice + (item.customizationTotal || 0)) * item.quantity
+                      const originalLinePrice = (item.product.price + (item.customizationTotal || 0)) * item.quantity
                       return (
                         <motion.div
                           key={item.cartKey}
@@ -173,9 +220,14 @@ export default function CartDrawer() {
                               </div>
                             )}
 
-                            <p className="text-blue-400 font-bold text-sm mt-1">
-                              ${linePrice.toFixed(2)}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {discount > 0 && (
+                                <span className="text-white/30 text-xs line-through">${originalLinePrice.toFixed(2)}</span>
+                              )}
+                              <p className="text-blue-400 font-bold text-sm">
+                                ${linePrice.toFixed(2)}
+                              </p>
+                            </div>
 
                             <div className="flex items-center gap-3 mt-2">
                               <button
@@ -210,8 +262,26 @@ export default function CartDrawer() {
             {/* Footer */}
             {items.length > 0 && (
               <div className="px-6 py-5 border-t border-white/10 space-y-4">
+                {savedAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-green-400 text-xs font-bold tracking-wider uppercase">
+                      You save
+                    </span>
+                    <span className="text-green-400 font-bold">
+                      -${savedAmount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {savedAmount > 0 && (
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white/30 text-xs line-through">
+                      ${items.reduce((s, i) => s + i.product.price * i.quantity, 0).toFixed(2)}
+                    </span>
+                    <span className="text-white/30 text-xs">{discount}% off</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
-                  <span className="text-white/60 text-sm">Subtotal</span>
+                  <span className="text-white/60 text-sm">Total</span>
                   <span className="text-white font-bold text-lg">${total().toFixed(2)}</span>
                 </div>
                 <p className="text-white/30 text-xs">Shipping calculated at checkout</p>

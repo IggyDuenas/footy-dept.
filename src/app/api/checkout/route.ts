@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { CartItem } from '@/types'
+import { getDiscountPercent, applyDiscount } from '@/lib/volumeDiscount'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,11 +11,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 })
     }
 
+    const totalItemCount = items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)
+    const discountPercent = getDiscountPercent(totalItemCount)
+
     const lineItems = items.map((item) => {
       // Build description — only include customizations that exist
       const descParts: string[] = [`Size: ${item.size}`]
       if (item.customName) descParts.push(`Name: ${item.customName} ${item.customNumber ?? ''}`.trim())
       if (item.selectedBadges && item.selectedBadges.length > 0) descParts.push(`Badges: ${item.selectedBadges.map((b: { name: string }) => b.name).join(', ')}`)
+      if (discountPercent > 0) descParts.push(`${discountPercent}% volume discount applied`)
+
+      const discountedPrice = applyDiscount(item.product.price, discountPercent)
 
       return {
         price_data: {
@@ -30,8 +37,7 @@ export async function POST(req: NextRequest) {
               slug: item.product.slug,
             },
           },
-          // Unit price includes customization add-on total
-          unit_amount: Math.round((item.product.price + (item.customizationTotal || 0)) * 100),
+          unit_amount: Math.round((discountedPrice + (item.customizationTotal || 0)) * 100),
         },
         quantity: item.quantity,
       }
@@ -87,6 +93,7 @@ export async function POST(req: NextRequest) {
             s: item.size,
             u: item.product.price,
           }
+          if (discountPercent > 0) min.dp = applyDiscount(item.product.price, discountPercent)
           if (item.customName) min.n = item.customName
           if (item.customNumber != null) min.num = item.customNumber
           if (item.selectedBadges && item.selectedBadges.length > 0) min.b = item.selectedBadges

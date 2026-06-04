@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { Heart, ShoppingBag } from 'lucide-react'
 import { Product } from '@/types'
 import { useCartStore, useWishlistStore } from '@/store/cartStore'
+import { getDiscountPercent } from '@/lib/volumeDiscount'
 import toast from 'react-hot-toast'
 
 interface ProductCardProps {
@@ -17,7 +18,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [hovered, setHovered] = useState(false)
   const [adding, setAdding] = useState(false)
   const { addItem, itemCount } = useCartStore()
-  const atLimit = itemCount() >= 10
+  const count = itemCount()
+  const atLimit = count >= 10
+  const volumeDiscount = getDiscountPercent(count)
   const { toggle, has } = useWishlistStore()
   const wishlisted = has(product.id)
 
@@ -83,6 +86,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             )}
             {discount && !outOfStock && (
               <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">-{discount}%</span>
+            )}
+            {volumeDiscount > 0 && !outOfStock && (
+              <span className="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 tracking-wider uppercase">{volumeDiscount}% off in your cart</span>
             )}
           </div>
 
