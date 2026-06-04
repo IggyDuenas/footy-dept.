@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { useCartStore } from '@/store/cartStore'
 
 export default function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, total } = useCartStore()
+  const { items, isOpen, closeCart, removeItem, updateQuantity, total, itemCount } = useCartStore()
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
@@ -284,6 +284,11 @@ export default function CartDrawer() {
                   </AnimatePresence>
                 </div>
 
+                {itemCount() >= 10 && (
+                  <p className="text-yellow-400 text-xs text-center tracking-wide">
+                    Maximum 10 jerseys reached. Remove an item to add more.
+                  </p>
+                )}
                 {checkoutError && (
                   <p className="text-red-400 text-xs text-center">{checkoutError}</p>
                 )}

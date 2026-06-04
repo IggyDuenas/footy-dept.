@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       // Build description — only include customizations that exist
       const descParts: string[] = [`Size: ${item.size}`]
       if (item.customName) descParts.push(`Name: ${item.customName} ${item.customNumber ?? ''}`.trim())
-      if (item.selectedBadges?.length > 0) descParts.push(`Badges: ${item.selectedBadges.map((b: { name: string }) => b.name).join(', ')}`)
+      if (item.selectedBadges && item.selectedBadges.length > 0) descParts.push(`Badges: ${item.selectedBadges.map((b: { name: string }) => b.name).join(', ')}`)
 
       return {
         price_data: {

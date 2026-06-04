@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { Heart, ShoppingBag } from 'lucide-react'
 import { Product } from '@/types'
 import { useCartStore, useWishlistStore } from '@/store/cartStore'
+import toast from 'react-hot-toast'
 
 interface ProductCardProps {
   product: Product
@@ -15,16 +16,21 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const [hovered, setHovered] = useState(false)
   const [adding, setAdding] = useState(false)
-  const { addItem } = useCartStore()
+  const { addItem, itemCount } = useCartStore()
+  const atLimit = itemCount() >= 10
   const { toggle, has } = useWishlistStore()
   const wishlisted = has(product.id)
 
   const handleQuickAdd = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setAdding(true)
     const defaultSize = product.sizes[1] || product.sizes[0] || 'M'
-    addItem(product, { size: defaultSize })
+    const success = addItem(product, { size: defaultSize })
+    if (!success) {
+      toast.error('Maximum 10 jerseys per order. Please checkout to continue.')
+      return
+    }
+    setAdding(true)
     setTimeout(() => setAdding(false), 1000)
   }
 
@@ -95,13 +101,16 @@ export default function ProductCard({ product }: ProductCardProps) {
           {!outOfStock && (
             <motion.button
               onClick={handleQuickAdd}
+              disabled={atLimit}
               initial={{ y: 10, opacity: 0 }}
               animate={hovered ? { y: 0, opacity: 1 } : { y: 10, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="absolute bottom-0 left-0 right-0 bg-white text-black font-black text-xs tracking-widest uppercase py-3 flex items-center justify-center gap-2 hover:bg-blue-500 hover:text-white transition-colors"
+              className={`absolute bottom-0 left-0 right-0 bg-white text-black font-black text-xs tracking-widest uppercase py-3 flex items-center justify-center gap-2 transition-colors ${
+                atLimit ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-500 hover:text-white'
+              }`}
             >
               <ShoppingBag size={13} />
-              {adding ? 'Added!' : 'Quick Add'}
+              {atLimit ? 'Cart Full' : adding ? 'Added!' : 'Quick Add'}
             </motion.button>
           )}
         </div>

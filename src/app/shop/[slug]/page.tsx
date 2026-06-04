@@ -39,7 +39,8 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const [selectedBadges, setSelectedBadges] = useState<Badge[]>([])
 
   const sizeGuideRef = useRef<HTMLDivElement>(null)
-  const { addItem } = useCartStore()
+  const { addItem, itemCount } = useCartStore()
+  const atLimit = itemCount() >= 10
 
   // ── Fetch product + its badges ─────────────────────────────────────────────
   useEffect(() => {
@@ -153,7 +154,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
         return
       }
     }
-    addItem(product, {
+    const success = addItem(product, {
       size: selectedSize,
       quantity,
       customName: isCustomizable && wantsCustomization ? customName.trim() : null,
@@ -161,6 +162,10 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       selectedBadges: selectedBadges.length ? selectedBadges : undefined,
       customizationTotal: customizationTotal || undefined,
     })
+    if (!success) {
+      toast.error('Maximum 10 jerseys per order. Please checkout to continue.')
+      return
+    }
     toast.success(`${product.name} added to cart`)
   }
 
@@ -445,10 +450,12 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
               <motion.button
                 whileTap={{ scale: 0.98 }}
                 onClick={handleAddToCart}
-                disabled={outOfStock}
-                className="w-full py-5 bg-white text-black font-black text-sm tracking-widest uppercase hover:bg-blue-500 hover:text-white transition-colors duration-300 mb-4 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={outOfStock || atLimit}
+                className={`w-full py-5 bg-white text-black font-black text-sm tracking-widest uppercase transition-colors duration-300 mb-4 disabled:cursor-not-allowed ${
+                  outOfStock || atLimit ? 'opacity-40' : 'hover:bg-blue-500 hover:text-white'
+                }`}
               >
-                {outOfStock ? 'Out of Stock' : `Add to Cart — $${lineTotal.toFixed(2)}`}
+                {outOfStock ? 'Out of Stock' : atLimit ? 'Cart Full — Max 10 Items' : `Add to Cart — $${lineTotal.toFixed(2)}`}
               </motion.button>
 
               {/* Trust badges */}

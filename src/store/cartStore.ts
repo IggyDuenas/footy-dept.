@@ -16,7 +16,7 @@ interface AddItemOptions {
 interface CartStore {
   items: CartItem[]
   isOpen: boolean
-  addItem: (product: Product, options: AddItemOptions) => void
+  addItem: (product: Product, options: AddItemOptions) => boolean
   removeItem: (cartKey: string) => void
   updateQuantity: (cartKey: string, quantity: number) => void
   clearCart: () => void
@@ -54,6 +54,11 @@ export const useCartStore = create<CartStore>()(
           customizationTotal,
         } = options
 
+        const currentCount = get().itemCount()
+        if (currentCount + quantity > 10) {
+          return false
+        }
+
         const cartKey = buildCartKey(product.id, size, customName, customNumber, selectedBadges)
         const items = get().items
         const existing = items.find((i) => i.cartKey === cartKey)
@@ -78,6 +83,7 @@ export const useCartStore = create<CartStore>()(
           set({ items: [...items, newItem] })
         }
         set({ isOpen: true })
+        return true
       },
 
       removeItem: (cartKey) => {
