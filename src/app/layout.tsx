@@ -9,12 +9,30 @@ import { BannerProvider } from '@/context/BannerContext'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Footy Dept. — Built for Matchday.',
-  description: "Premium football culture. Modern fanwear for the world's game.",
+  title: {
+    default: 'Footy Dept. — Built for Matchday.',
+    template: '%s — Footy Dept.',
+  },
+  description: 'Premium football culture. Shop fan jerseys, retro kits, national team shirts and mystery boxes. Quality fan-grade kits at fair prices. Built for matchday.',
+  keywords: ['football jerseys', 'soccer jerseys', 'replica football kits', 'retro football shirts', 'national team jerseys', 'fan kits', 'football culture', 'world cup jerseys'],
+  authors: [{ name: 'Footy Dept.' }],
+  creator: 'Footy Dept.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://footydept.com'),
   openGraph: {
-    title: 'Footy Dept.',
-    description: 'Built for Matchday.',
+    title: 'Footy Dept. — Built for Matchday.',
+    description: 'Premium football culture. Fan jerseys, retro kits, national team shirts.',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://footydept.com',
+    siteName: 'Footy Dept.',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Footy Dept. — Built for Matchday.',
+    description: 'Premium football culture. Fan jerseys, retro kits, national team shirts.',
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 }
 

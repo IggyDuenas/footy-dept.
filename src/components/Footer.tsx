@@ -8,6 +8,7 @@ const links = {
   ],
   Support: [
     { label: 'Track Order', href: '/track' },
+    { label: 'FAQ', href: '/faq' },
     { label: 'Sizing Guide', href: '/legal' },
     { label: 'Returns', href: '/legal' },
     { label: 'Contact', href: '/contact' },
