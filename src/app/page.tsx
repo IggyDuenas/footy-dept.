@@ -7,10 +7,7 @@ import SearchModal from '@/components/SearchModal'
 import Hero from '@/components/sections/Hero'
 import FeaturedCollections from '@/components/sections/FeaturedCollections'
 import BestSellers from '@/components/sections/BestSellers'
-import FullWidthBanner from '@/components/sections/FullWidthBanner'
 import WorldCupSection from '@/components/sections/WorldCupSection'
-import RetroCollection from '@/components/sections/RetroCollection'
-import About from '@/components/sections/About'
 import Newsletter from '@/components/sections/Newsletter'
 import Footer from '@/components/Footer'
 
@@ -26,10 +23,7 @@ export default function HomePage() {
       <Hero />
       <FeaturedCollections />
       <BestSellers />
-      <FullWidthBanner />
       <WorldCupSection />
-      <RetroCollection />
-      <About />
       <Newsletter />
       <Footer />
     </main>
