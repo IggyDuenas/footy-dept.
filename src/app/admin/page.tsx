@@ -177,10 +177,17 @@ export default function AdminPage() {
       toast.error('Name and slug are required')
       return
     }
+    if (editingProduct.type === 'national' && !editingProduct.country) {
+      toast.error('National team products require a country')
+      return
+    }
+    if (editingProduct.type === 'club' && !editingProduct.league) {
+      toast.error('Club products require a league')
+      return
+    }
 
     const productData = { ...editingProduct }
     // Apply "Other" overrides
-    if (productData.country === 'Other') productData.country = customCountry
     if (productData.type !== 'club') delete productData.league
     if (productData.league === 'Other') productData.league = customLeague
     if (productData.type === 'mystery') productData.version = 'fan'
@@ -500,27 +507,23 @@ export default function AdminPage() {
                       </select>
                     </div>
 
-                    {/* Country — hidden for club type */}
-                    {ep.type !== 'club' && (
-                      <div>
-                        <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Country</label>
-                        <select
-                          value={COUNTRIES.includes(ep.country || '') ? ep.country : 'Other'}
-                          onChange={(e) => {
-                            setEditingProduct({ ...ep, country: e.target.value === 'Other' ? 'Other' : e.target.value })
-                            if (e.target.value !== 'Other') setCustomCountry('')
-                          }}
-                          className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
-                        >
-                          {COUNTRIES.map((c) => <option key={c} value={c} className="bg-[#111]">{c}</option>)}
-                        </select>
-                        {ep.country === 'Other' && (
-                          <input type="text" placeholder="Enter country name" value={customCountry}
-                            onChange={(e) => setCustomCountry(e.target.value)}
-                            className="w-full mt-2 bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30" />
-                        )}
-                      </div>
-                    )}
+                    {/* Country */}
+                    <div>
+                      <label className="block text-white/40 text-xs tracking-widest uppercase mb-1">Country</label>
+                      <p className="text-white/20 text-xs mb-1">(e.g. colombia, brazil, england — use lowercase)</p>
+                      <input
+                        type="text"
+                        value={ep.country || ''}
+                        placeholder="e.g. colombia"
+                        onChange={(e) => setEditingProduct({ ...ep, country: e.target.value.toLowerCase().trim() })}
+                        className="w-full bg-white/5 border border-white/10 text-white px-4 py-3 text-sm outline-none focus:border-white/30"
+                      />
+                      {ep.type === 'national' && (
+                        <p className="text-yellow-400/60 text-xs mt-1">
+                          ⚠ Make sure country matches exactly: e.g. &quot;colombia&quot; not &quot;Colombia&quot; or &quot;COLOMBIA&quot;
+                        </p>
+                      )}
+                    </div>
 
                     {/* League — only for clubs */}
                     {showLeague && (
@@ -774,6 +777,7 @@ export default function AdminPage() {
                             <div>
                               <p className="text-white font-medium">{p.name}</p>
                               <p className="text-white/30 text-xs">{p.slug}</p>
+                              <p className={`text-xs ${p.country ? 'text-white/20' : 'text-red-400/50'}`}>{p.country || 'no country set'}</p>
                             </div>
                           </div>
                         </td>

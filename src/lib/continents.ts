@@ -1,47 +1,129 @@
-const CONTINENT_MAP: Record<string, string[]> = {
-  'South America': [
-    'argentina', 'brazil', 'chile', 'colombia', 'ecuador', 'paraguay',
-    'peru', 'uruguay', 'venezuela', 'bolivia',
-  ],
-  'Europe': [
-    'england', 'france', 'germany', 'spain', 'italy', 'portugal',
-    'netherlands', 'belgium', 'croatia', 'denmark', 'switzerland',
-    'austria', 'sweden', 'norway', 'poland', 'czech republic',
-    'scotland', 'wales', 'ireland', 'serbia', 'turkey', 'ukraine',
-    'hungary', 'greece', 'romania', 'finland', 'iceland', 'slovakia',
-    'slovenia', 'bosnia', 'albania', 'north macedonia', 'montenegro',
-    'georgia', 'kosovo',
-  ],
-  'Africa': [
-    'nigeria', 'senegal', 'cameroon', 'ghana', 'ivory coast', 'egypt',
-    'morocco', 'algeria', 'tunisia', 'south africa', 'mali', 'congo',
-    'dr congo', 'burkina faso', 'guinea', 'mozambique', 'zambia',
-    'zimbabwe', 'kenya', 'tanzania', 'uganda', 'angola', 'ethiopia',
-  ],
-  'Asia': [
-    'japan', 'south korea', 'saudi arabia', 'iran', 'australia',
-    'china', 'qatar', 'uae', 'iraq', 'uzbekistan', 'india',
-    'thailand', 'vietnam', 'indonesia', 'malaysia', 'jordan',
-    'oman', 'bahrain', 'kuwait', 'palestine', 'syria', 'lebanon',
-  ],
-  'North America': [
-    'usa', 'mexico', 'canada', 'costa rica', 'panama', 'honduras',
-    'jamaica', 'el salvador', 'guatemala', 'trinidad and tobago',
-    'haiti', 'curacao', 'nicaragua',
-  ],
+const COUNTRY_CONTINENT: Record<string, string> = {
+  // South America
+  'argentina': 'South America',
+  'brazil': 'South America',
+  'chile': 'South America',
+  'colombia': 'South America',
+  'ecuador': 'South America',
+  'paraguay': 'South America',
+  'peru': 'South America',
+  'uruguay': 'South America',
+  'venezuela': 'South America',
+  'bolivia': 'South America',
+  // Europe
+  'england': 'Europe',
+  'france': 'Europe',
+  'germany': 'Europe',
+  'spain': 'Europe',
+  'italy': 'Europe',
+  'portugal': 'Europe',
+  'netherlands': 'Europe',
+  'belgium': 'Europe',
+  'croatia': 'Europe',
+  'denmark': 'Europe',
+  'switzerland': 'Europe',
+  'austria': 'Europe',
+  'sweden': 'Europe',
+  'norway': 'Europe',
+  'poland': 'Europe',
+  'czech republic': 'Europe',
+  'scotland': 'Europe',
+  'wales': 'Europe',
+  'ireland': 'Europe',
+  'serbia': 'Europe',
+  'turkey': 'Europe',
+  'ukraine': 'Europe',
+  'hungary': 'Europe',
+  'greece': 'Europe',
+  'romania': 'Europe',
+  'finland': 'Europe',
+  'iceland': 'Europe',
+  'slovakia': 'Europe',
+  'slovenia': 'Europe',
+  'bosnia': 'Europe',
+  'bosnia and herzegovina': 'Europe',
+  'albania': 'Europe',
+  'north macedonia': 'Europe',
+  'montenegro': 'Europe',
+  'georgia': 'Europe',
+  'kosovo': 'Europe',
+  // Africa
+  'nigeria': 'Africa',
+  'senegal': 'Africa',
+  'cameroon': 'Africa',
+  'ghana': 'Africa',
+  'ivory coast': 'Africa',
+  'egypt': 'Africa',
+  'morocco': 'Africa',
+  'algeria': 'Africa',
+  'tunisia': 'Africa',
+  'south africa': 'Africa',
+  'mali': 'Africa',
+  'congo': 'Africa',
+  'dr congo': 'Africa',
+  'burkina faso': 'Africa',
+  'guinea': 'Africa',
+  'mozambique': 'Africa',
+  'zambia': 'Africa',
+  'zimbabwe': 'Africa',
+  'kenya': 'Africa',
+  'tanzania': 'Africa',
+  'uganda': 'Africa',
+  'angola': 'Africa',
+  'ethiopia': 'Africa',
+  // Asia & Oceania
+  'japan': 'Asia & Oceania',
+  'south korea': 'Asia & Oceania',
+  'saudi arabia': 'Asia & Oceania',
+  'iran': 'Asia & Oceania',
+  'australia': 'Asia & Oceania',
+  'new zealand': 'Asia & Oceania',
+  'china': 'Asia & Oceania',
+  'qatar': 'Asia & Oceania',
+  'uae': 'Asia & Oceania',
+  'iraq': 'Asia & Oceania',
+  'uzbekistan': 'Asia & Oceania',
+  'india': 'Asia & Oceania',
+  'thailand': 'Asia & Oceania',
+  'vietnam': 'Asia & Oceania',
+  'indonesia': 'Asia & Oceania',
+  'malaysia': 'Asia & Oceania',
+  'jordan': 'Asia & Oceania',
+  'oman': 'Asia & Oceania',
+  'bahrain': 'Asia & Oceania',
+  'kuwait': 'Asia & Oceania',
+  'palestine': 'Asia & Oceania',
+  'syria': 'Asia & Oceania',
+  'lebanon': 'Asia & Oceania',
+  // North & Central America
+  'usa': 'North & Central America',
+  'mexico': 'North & Central America',
+  'canada': 'North & Central America',
+  'costa rica': 'North & Central America',
+  'panama': 'North & Central America',
+  'honduras': 'North & Central America',
+  'jamaica': 'North & Central America',
+  'el salvador': 'North & Central America',
+  'guatemala': 'North & Central America',
+  'trinidad and tobago': 'North & Central America',
+  'haiti': 'North & Central America',
+  'curacao': 'North & Central America',
+  'nicaragua': 'North & Central America',
 }
 
 export function getAvailableContinents(countries: string[]): string[] {
   const lower = countries.map(c => c.toLowerCase())
-  return Object.keys(CONTINENT_MAP).filter(continent =>
-    CONTINENT_MAP[continent].some(c => lower.includes(c))
-  )
+  const continents = new Set<string>()
+  for (const country of lower) {
+    const continent = COUNTRY_CONTINENT[country]
+    if (continent) continents.add(continent)
+  }
+  return Array.from(continents)
 }
 
 export function getCountriesInContinent(continent: string, availableCountries: string[]): string[] {
-  const continentCountries = CONTINENT_MAP[continent] ?? []
   const lower = availableCountries.map(c => c.toLowerCase())
-  return continentCountries.filter(c => lower.includes(c)).sort()
+  return lower.filter(c => COUNTRY_CONTINENT[c] === continent).sort()
 }
 
 export function formatCountryName(country: string): string {
