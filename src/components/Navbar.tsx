@@ -12,9 +12,9 @@ interface NavbarProps {
 }
 
 const navLinks = [
-  { label: 'Clubs', href: '/shop' },
-  { label: 'Retro', href: '/shop' },
-  { label: 'National Teams', href: '/shop' },
+  { label: 'Clubs', href: '/shop?type=club' },
+  { label: 'Retro', href: '/shop?type=retro' },
+  { label: 'National Teams', href: '/shop?type=national' },
   { label: 'About', href: '/about' },
 ]
 

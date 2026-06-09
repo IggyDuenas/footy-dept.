@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Navbar from '@/components/Navbar'
 import CartDrawer from '@/components/CartDrawer'
@@ -13,6 +14,15 @@ import { parseTeamFromSlug, formatLeague } from '@/lib/parseTeam'
 import { getAvailableContinents, getCountriesInContinent, formatCountryName } from '@/lib/continents'
 
 export default function ShopPage() {
+  return (
+    <Suspense fallback={null}>
+      <ShopContent />
+    </Suspense>
+  )
+}
+
+function ShopContent() {
+  const searchParams = useSearchParams()
   const [searchOpen, setSearchOpen] = useState(false)
 
   // Filter state
@@ -33,6 +43,24 @@ export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [totalCount, setTotalCount] = useState(0)
+
+  // Read URL params on mount to pre-select filters
+  useEffect(() => {
+    const type = searchParams.get('type')
+    const country = searchParams.get('country')
+    const league = searchParams.get('league')
+
+    if (type) {
+      if (type === 'retro') {
+        setActiveType('retro')
+      } else {
+        setActiveType(type.toLowerCase())
+      }
+    }
+    if (country) setActiveCountry(country.toLowerCase())
+    if (league) setActiveLeague(league.toLowerCase())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Fetch available leagues (clubs)
   useEffect(() => {
@@ -92,7 +120,11 @@ export default function ShopPage() {
 
       let query = supabase.from('products').select('*')
 
-      if (activeType) query = query.eq('type', activeType)
+      if (activeType === 'retro') {
+        query = query.eq('version', 'retro')
+      } else if (activeType) {
+        query = query.eq('type', activeType)
+      }
 
       if (activeType === 'club' && activeLeague) {
         query = query.ilike('league', activeLeague)
@@ -174,7 +206,12 @@ export default function ShopPage() {
         {/* Page header */}
         <div className="border-b border-white/5 bg-[#080808] px-6 py-12">
           <div className="max-w-[1400px] mx-auto">
-            <p className="text-blue-400 text-xs tracking-[0.3em] uppercase mb-3">All Products</p>
+            <p className="text-blue-400 text-xs tracking-[0.3em] uppercase mb-3">{{
+              '': 'All Products',
+              'club': 'Club Kits',
+              'national': 'National Teams',
+              'retro': 'Retro Collection',
+            }[activeType] ?? 'All Products'}</p>
             <h1 className="text-6xl md:text-8xl font-black text-white tracking-tight uppercase leading-none">
               The Shop.
             </h1>
@@ -189,7 +226,7 @@ export default function ShopPage() {
               {[
                 { value: 'club', label: 'Clubs' },
                 { value: 'national', label: 'National Teams' },
-                { value: 'mystery', label: 'Mystery Box' },
+                { value: 'retro', label: 'Retro' },
               ].map(({ value, label }) => (
                 <button
                   key={value}
@@ -303,7 +340,7 @@ export default function ShopPage() {
             })()}
 
             {/* ROW 6 — Era pills */}
-            {activeType && activeType !== 'mystery' && (
+            {activeType && (
               <div className="flex items-center gap-2 flex-wrap mt-3">
                 <span className="text-white/30 text-[10px] tracking-widest uppercase mr-1">Era:</span>
                 {['2020', '2010', '2000', '1990', '1980', '1970'].map(decade => (
@@ -326,7 +363,7 @@ export default function ShopPage() {
             {hasActiveFilters && (
               <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5">
                 <span className="text-white/20 text-[10px] tracking-widest uppercase">Filtered by:</span>
-                {activeType && <span className="text-white/50 text-xs">{activeType === 'club' ? 'Clubs' : activeType === 'national' ? 'National Teams' : 'Mystery Box'}</span>}
+                {activeType && <span className="text-white/50 text-xs">{activeType === 'club' ? 'Clubs' : activeType === 'national' ? 'National Teams' : activeType === 'retro' ? 'Retro' : activeType}</span>}
                 {activeLeague && <><span className="text-white/20">›</span><span className="text-white/50 text-xs">{formatLeague(activeLeague)}</span></>}
                 {activeTeam && <><span className="text-white/20">›</span><span className="text-blue-400 text-xs font-semibold">{activeTeam}</span></>}
                 {activeContinent && <><span className="text-white/20">›</span><span className="text-white/50 text-xs">{activeContinent}</span></>}
