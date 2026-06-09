@@ -15,7 +15,7 @@ import { getAvailableContinents, getCountriesInContinent, formatCountryName } fr
 
 export default function ShopPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
       <ShopContent />
     </Suspense>
   )
@@ -44,23 +44,27 @@ function ShopContent() {
   const [loading, setLoading] = useState(true)
   const [totalCount, setTotalCount] = useState(0)
 
-  // Read URL params on mount to pre-select filters
+  // Read URL params and apply as filters — re-runs on every URL change
   useEffect(() => {
     const type = searchParams.get('type')
     const country = searchParams.get('country')
     const league = searchParams.get('league')
 
+    // Reset all filters first
+    setActiveType('')
+    setActiveLeague('')
+    setActiveTeam('')
+    setActiveContinent('')
+    setActiveCountry('')
+    setActiveEra('')
+
+    // Then apply URL params
     if (type) {
-      if (type === 'retro') {
-        setActiveType('retro')
-      } else {
-        setActiveType(type.toLowerCase())
-      }
+      setActiveType(type.toLowerCase())
     }
     if (country) setActiveCountry(country.toLowerCase())
     if (league) setActiveLeague(league.toLowerCase())
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [searchParams])
 
   // Fetch available leagues (clubs)
   useEffect(() => {
