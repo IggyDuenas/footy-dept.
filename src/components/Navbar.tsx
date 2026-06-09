@@ -12,10 +12,11 @@ interface NavbarProps {
 }
 
 const navLinks = [
-  { label: 'Clubs', href: '/shop?type=club' },
-  { label: 'Retro', href: '/shop?type=retro' },
-  { label: 'National Teams', href: '/shop?type=national' },
-  { label: 'About', href: '/about' },
+  { label: 'Clubs', href: '/shop?type=club', highlight: false },
+  { label: 'Retro', href: '/shop?type=retro', highlight: false },
+  { label: 'National Teams', href: '/shop?type=national', highlight: false },
+  { label: 'World Cup', href: '/worldcup', highlight: true },
+  { label: 'About', href: '/about', highlight: false },
 ]
 
 export default function Navbar({ onSearchOpen }: NavbarProps) {
@@ -56,7 +57,11 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
               <Link
                 key={link.label}
                 href={link.href}
-                className="text-white/70 hover:text-white text-sm font-medium tracking-wider uppercase transition-colors duration-200"
+                className={`text-sm font-medium tracking-wider uppercase transition-colors duration-200 ${
+                  link.highlight
+                    ? 'text-blue-400 hover:text-blue-300'
+                    : 'text-white/70 hover:text-white'
+                }`}
               >
                 {link.label}
               </Link>
@@ -125,7 +130,9 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                   <Link
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className="block py-5 text-3xl font-black tracking-tight text-white border-b border-white/10 uppercase"
+                    className={`block py-5 text-3xl font-black tracking-tight border-b border-white/10 uppercase ${
+                      link.highlight ? 'text-blue-400' : 'text-white'
+                    }`}
                   >
                     {link.label}
                   </Link>

@@ -62,7 +62,10 @@ function ShopContent() {
     if (type) {
       setActiveType(type.toLowerCase())
     }
-    if (country) setActiveCountry(country.toLowerCase())
+    if (country) {
+      setActiveCountry(country.toLowerCase())
+      setActiveType('national')
+    }
     if (league) setActiveLeague(league.toLowerCase())
   }, [searchParams])
 

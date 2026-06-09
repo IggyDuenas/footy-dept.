@@ -7,7 +7,6 @@ import SearchModal from '@/components/SearchModal'
 import Hero from '@/components/sections/Hero'
 import FeaturedCollections from '@/components/sections/FeaturedCollections'
 import BestSellers from '@/components/sections/BestSellers'
-import WorldCupSection from '@/components/sections/WorldCupSection'
 import Newsletter from '@/components/sections/Newsletter'
 import Footer from '@/components/Footer'
 
@@ -23,7 +22,6 @@ export default function HomePage() {
       <Hero />
       <FeaturedCollections />
       <BestSellers />
-      <WorldCupSection />
       <Newsletter />
       <Footer />
     </main>
