@@ -63,7 +63,11 @@ function ShopContent() {
       setActiveType(type.toLowerCase())
     }
     if (country) {
-      setActiveCountry(country.toLowerCase())
+      const normalized = country
+        .toLowerCase()
+        .replace(/-/g, ' ')
+        .trim()
+      setActiveCountry(normalized)
       setActiveType('national')
     }
     if (league) setActiveLeague(league.toLowerCase())
