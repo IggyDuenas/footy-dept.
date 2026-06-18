@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         unit_price: number
         custom_name: string | null
         custom_number: number | null
-        selected_badges: Array<{ badge_id: string; name: string; price: number }>
+        has_badge: boolean
         customization_total: number
       }> = JSON.parse(rawItems).map((min: Record<string, unknown>) => ({
         product_id: min.p,
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         unit_price: (min.dp as number | undefined) ?? min.u,
         custom_name: min.n ?? null,
         custom_number: min.num ?? null,
-        selected_badges: min.b ?? [],
+        has_badge: min.b === true,
         customization_total: min.ct ?? 0,
       }))
 
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
         unit_price: item.unit_price,
         custom_name: item.custom_name || null,
         custom_number: item.custom_number ?? null,
-        selected_badges: item.selected_badges || [],
+        has_badge: item.has_badge || false,
         customization_total: item.customization_total || 0,
       }))
 

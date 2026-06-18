@@ -1,11 +1,3 @@
-export interface Badge {
-  id: string
-  name: string
-  image_url: string
-  price: number
-  created_at: string
-}
-
 export interface Product {
   id: string
   name: string
@@ -27,8 +19,9 @@ export interface Product {
   // Customization — opt-in per product (default false)
   customization_enabled?: boolean
   customization_price?: number
-  // Populated by product detail page fetch, not a DB column
-  available_badges?: Badge[]
+  // Badge — opt-in per product (default false)
+  badge_enabled?: boolean
+  badge_price?: number
 }
 
 export interface Order {
@@ -54,7 +47,7 @@ export interface OrderItem {
   unit_price: number
   custom_name?: string
   custom_number?: number
-  selected_badges?: Array<{ badge_id: string; name: string; price: number }>
+  has_badge?: boolean
   customization_total?: number
   product?: Product
 }
@@ -75,7 +68,7 @@ export interface CartItem {
   size: string
   customName?: string
   customNumber?: number
-  selectedBadges?: Badge[]
+  wantsBadge?: boolean
   customizationTotal?: number
 }
 

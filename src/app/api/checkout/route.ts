@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       // Build description — only include customizations that exist
       const descParts: string[] = [`Size: ${item.size}`]
       if (item.customName) descParts.push(`Name: ${item.customName} ${item.customNumber ?? ''}`.trim())
-      if (item.selectedBadges && item.selectedBadges.length > 0) descParts.push(`Badges: ${item.selectedBadges.map((b: { name: string }) => b.name).join(', ')}`)
+      if (item.wantsBadge) descParts.push('Badge: Yes')
       if (discountPercent > 0) descParts.push(`${discountPercent}% volume discount applied`)
 
       const discountedPrice = applyDiscount(item.product.price, discountPercent)
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
           if (discountPercent > 0) min.dp = applyDiscount(item.product.price, discountPercent)
           if (item.customName) min.n = item.customName
           if (item.customNumber != null) min.num = item.customNumber
-          if (item.selectedBadges && item.selectedBadges.length > 0) min.b = item.selectedBadges
+          if (item.wantsBadge) min.b = true
           if (item.customizationTotal && item.customizationTotal > 0) min.ct = item.customizationTotal
           return min
         })

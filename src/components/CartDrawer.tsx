@@ -206,18 +206,9 @@ export default function CartDrawer() {
                               </p>
                             )}
 
-                            {/* Badge chips */}
-                            {item.selectedBadges && item.selectedBadges.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {item.selectedBadges.map((b) => (
-                                  <span
-                                    key={b.id}
-                                    className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 leading-none"
-                                  >
-                                    {b.name}
-                                  </span>
-                                ))}
-                              </div>
+                            {/* Badge */}
+                            {item.wantsBadge && (
+                              <p className="text-white/40 text-xs mt-0.5">Badge included</p>
                             )}
 
                             <div className="flex items-center gap-2 mt-1">

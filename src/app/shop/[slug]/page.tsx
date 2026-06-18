@@ -10,7 +10,7 @@ import CartDrawer from '@/components/CartDrawer'
 import SearchModal from '@/components/SearchModal'
 import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabase'
-import { Product, Badge } from '@/types'
+import { Product } from '@/types'
 import { useCartStore } from '@/store/cartStore'
 import { getDiscountPercent, applyDiscount } from '@/lib/volumeDiscount'
 import toast from 'react-hot-toast'
@@ -37,7 +37,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const [wantsCustomization, setWantsCustomization] = useState(false)
   const [customName, setCustomName] = useState('')
   const [customNumberStr, setCustomNumberStr] = useState('')
-  const [selectedBadges, setSelectedBadges] = useState<Badge[]>([])
+  const [wantsBadge, setWantsBadge] = useState(false)
 
   const sizeGuideRef = useRef<HTMLDivElement>(null)
   const { addItem, itemCount } = useCartStore()
@@ -45,31 +45,11 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const atLimit = cartCount >= 10
   const cartDiscount = getDiscountPercent(cartCount)
 
-  // ── Fetch product + its badges ─────────────────────────────────────────────
+  // ── Fetch product ──────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchProduct = async () => {
       const { data } = await supabase.from('products').select('*').eq('slug', slug).single()
-      let p: Product | null = data || null
-
-      if (p) {
-        // Fetch available badges for this product
-        const { data: pb } = await supabase
-          .from('product_badges')
-          .select('badge_id')
-          .eq('product_id', p.id)
-
-        if (pb && pb.length > 0) {
-          const { data: badges } = await supabase
-            .from('badges')
-            .select('*')
-            .in('id', pb.map((r: { badge_id: string }) => r.badge_id))
-          p = { ...p, available_badges: badges || [] }
-        } else {
-          p = { ...p, available_badges: [] }
-        }
-      }
-
-      setProduct(p)
+      setProduct(data || null)
       setLoading(false)
     }
     fetchProduct()
@@ -116,12 +96,14 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
     : null
 
   const isCustomizable = product.customization_enabled === true
-  const customizationFee = product.customization_price ?? 10
+  const customizationFee = product.customization_price ?? 2.50
+  const isBadgeAvailable = product.badge_enabled === true
+  const badgeFee = product.badge_price ?? 2.50
 
   const customizationTotal = (() => {
     let total = 0
     if (isCustomizable && wantsCustomization) total += customizationFee
-    selectedBadges.forEach((b) => { total += b.price })
+    if (isBadgeAvailable && wantsBadge) total += badgeFee
     return total
   })()
 
@@ -129,14 +111,6 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const lineTotal = (displayPrice + customizationTotal) * quantity
 
   const outOfStock = product.inventory === 0
-
-  const toggleBadge = (badge: Badge) => {
-    setSelectedBadges((prev) =>
-      prev.some((b) => b.id === badge.id)
-        ? prev.filter((b) => b.id !== badge.id)
-        : [...prev, badge]
-    )
-  }
 
   const handleSizeGuide = () => {
     setOpenAccordion('Size Guide')
@@ -163,7 +137,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       quantity,
       customName: isCustomizable && wantsCustomization ? customName.trim() : null,
       customNumber: isCustomizable && wantsCustomization ? parseInt(customNumberStr) : null,
-      selectedBadges: selectedBadges.length ? selectedBadges : undefined,
+      wantsBadge: isBadgeAvailable && wantsBadge ? true : undefined,
       customizationTotal: customizationTotal || undefined,
     })
     if (!success) {
@@ -398,45 +372,25 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
                 </div>
               )}
 
-              {/* ── Badges section ────────────────────────────────────────── */}
-              {product.available_badges && product.available_badges.length > 0 && (
+              {/* ── Badge toggle ─────────────────────────────────────────── */}
+              {isBadgeAvailable && (
                 <div className="mb-6">
-                  <p className="text-white text-sm font-black tracking-widest uppercase mb-3">Add Badges</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {product.available_badges.map((badge) => {
-                      const isSelected = selectedBadges.some((b) => b.id === badge.id)
-                      return (
-                        <button
-                          key={badge.id}
-                          onClick={() => toggleBadge(badge)}
-                          className={`border p-3 text-left transition-all duration-200 ${
-                            isSelected
-                              ? 'border-blue-400 bg-blue-500/10'
-                              : 'border-white/20 hover:border-white/40'
-                          }`}
-                        >
-                          <div className="relative aspect-square bg-zinc-900 mb-2 overflow-hidden">
-                            <Image
-                              src={badge.image_url}
-                              alt={badge.name}
-                              fill
-                              className="object-contain p-2"
-                            />
-                          </div>
-                          <p className="text-white text-xs font-semibold leading-tight truncate">{badge.name}</p>
-                          <p className="text-blue-400 text-xs font-bold mt-0.5">+${badge.price.toFixed(2)}</p>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {selectedBadges.length > 0 && (
-                    <p className="text-white/40 text-xs mt-3 tracking-wider">
-                      Badges:{' '}
-                      <span className="text-white">
-                        +${selectedBadges.reduce((s, b) => s + b.price, 0).toFixed(2)}
-                      </span>
-                    </p>
-                  )}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <div
+                      onClick={() => setWantsBadge((v) => !v)}
+                      className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
+                        wantsBadge ? 'bg-blue-500' : 'bg-white/10'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full mt-0.5 transition-transform ${
+                        wantsBadge ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                    <span className="text-white/70 text-sm">
+                      Add badge{' '}
+                      <span className="text-blue-400 font-bold">+${badgeFee.toFixed(2)}</span>
+                    </span>
+                  </label>
                 </div>
               )}
 

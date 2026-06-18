@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Badge, CartItem, Product } from '@/types'
+import { CartItem, Product } from '@/types'
 import { getDiscountPercent, calcCartTotals } from '@/lib/volumeDiscount'
 
 interface AddItemOptions {
@@ -10,7 +10,7 @@ interface AddItemOptions {
   quantity?: number
   customName?: string | null
   customNumber?: number | null
-  selectedBadges?: Badge[]
+  wantsBadge?: boolean
   customizationTotal?: number
 }
 
@@ -35,10 +35,9 @@ function buildCartKey(
   size: string,
   customName?: string | null,
   customNumber?: number | null,
-  selectedBadges?: Badge[]
+  wantsBadge?: boolean
 ): string {
-  const badgeIds = (selectedBadges || []).map((b) => b.id).sort().join(',')
-  return `${productId}-${size}-${customName || ''}-${customNumber ?? ''}-${badgeIds}`
+  return `${productId}-${size}-${customName || ''}-${customNumber ?? ''}-${wantsBadge ? 'badge' : ''}`
 }
 
 export const useCartStore = create<CartStore>()(
@@ -53,7 +52,7 @@ export const useCartStore = create<CartStore>()(
           quantity = 1,
           customName,
           customNumber,
-          selectedBadges,
+          wantsBadge,
           customizationTotal,
         } = options
 
@@ -62,7 +61,7 @@ export const useCartStore = create<CartStore>()(
           return false
         }
 
-        const cartKey = buildCartKey(product.id, size, customName, customNumber, selectedBadges)
+        const cartKey = buildCartKey(product.id, size, customName, customNumber, wantsBadge)
         const items = get().items
         const existing = items.find((i) => i.cartKey === cartKey)
 
@@ -80,7 +79,7 @@ export const useCartStore = create<CartStore>()(
             quantity,
             customName: customName || undefined,
             customNumber: customNumber ?? undefined,
-            selectedBadges: selectedBadges?.length ? selectedBadges : undefined,
+            wantsBadge: wantsBadge || undefined,
             customizationTotal: customizationTotal || undefined,
           }
           set({ items: [...items, newItem] })
