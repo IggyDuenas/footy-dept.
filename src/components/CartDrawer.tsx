@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Minus, Plus, ShoppingBag, Tag, ChevronDown } from 'lucide-react'
+import { X, Minus, Plus, ShoppingBag, Tag, ChevronDown, Check } from 'lucide-react'
 import Image from 'next/image'
 import { useCartStore } from '@/store/cartStore'
 import { getNextTier, applyDiscount } from '@/lib/volumeDiscount'
@@ -121,39 +121,58 @@ export default function CartDrawer() {
 
             {/* Volume discount progress */}
             {items.length > 0 && (
-              <div className="px-6 py-3 border-b border-white/10">
+              <div className="px-6 py-4 border-b border-white/10 bg-white/[0.02]">
                 {discount > 0 ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-green-400 text-xs font-bold tracking-wider uppercase">
-                      {discount}% off applied
-                    </span>
-                    {nextTier && (
-                      <span className="text-white/40 text-xs">
-                        Add {nextTier.itemsNeeded} more → {nextTier.nextPercent}% off
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400 text-sm font-bold tracking-wide">
+                        {discount}% OFF UNLOCKED
                       </span>
+                    </div>
+                    {nextTier ? (
+                      <p className="text-white/50 text-xs mt-0.5">
+                        Add {nextTier.itemsNeeded} more jersey{nextTier.itemsNeeded !== 1 ? 's' : ''} to unlock {nextTier.nextPercent}% off
+                      </p>
+                    ) : (
+                      <p className="text-white/50 text-xs mt-0.5">Max discount reached</p>
                     )}
-                  </div>
+                  </>
                 ) : (
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/40 text-xs">
-                      Add {3 - count > 0 ? 3 - count : 0} more jersey{3 - count !== 1 ? 's' : ''} for 5% off each
-                    </span>
-                  </div>
+                  <p className="text-white/60 text-sm">
+                    Add {3 - count > 0 ? 3 - count : 0} more jersey{3 - count !== 1 ? 's' : ''} for 5% off
+                  </p>
                 )}
-                <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+
+                <div className="relative mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min((count / 10) * 100, 100)}%` }}
                   />
-                </div>
-                <div className="flex justify-between mt-1">
                   {[3, 5, 7, 10].map(milestone => (
-                    <span
+                    <div
                       key={milestone}
-                      className={`text-[10px] ${count >= milestone ? 'text-blue-400' : 'text-white/20'}`}
-                    >
-                      {milestone}
-                    </span>
+                      className="absolute top-0 h-full w-px bg-black/40"
+                      style={{ left: `${(milestone / 10) * 100}%` }}
+                    />
+                  ))}
+                </div>
+
+                <div className="flex justify-between mt-1.5">
+                  {[
+                    { count: 3, pct: 5 },
+                    { count: 5, pct: 10 },
+                    { count: 7, pct: 15 },
+                    { count: 10, pct: 20 },
+                  ].map(({ count: milestone, pct }) => (
+                    <div key={milestone} className="flex flex-col items-center">
+                      <span className={`flex items-center gap-0.5 text-[10px] font-semibold ${count >= milestone ? 'text-blue-400' : 'text-white/30'}`}>
+                        {count >= milestone && <Check size={8} />}
+                        {pct}%
+                      </span>
+                      <span className={`text-[9px] ${count >= milestone ? 'text-white/40' : 'text-white/20'}`}>
+                        {milestone}+
+                      </span>
+                    </div>
                   ))}
                 </div>
               </div>
