@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Minus, Plus, ShoppingBag, Tag, ChevronDown, Check } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useCartStore } from '@/store/cartStore'
 import { getNextTier, applyDiscount } from '@/lib/volumeDiscount'
 
@@ -379,6 +380,12 @@ export default function CartDrawer() {
                 >
                   {checkoutLoading ? 'Redirecting...' : `Checkout — $${total().toFixed(2)}`}
                 </button>
+                <p className="text-white/40 text-[10px] text-center leading-relaxed">
+                  By placing your order, you agree to our{' '}
+                  <Link href="/terms" target="_blank" className="text-white/60 underline underline-offset-2 hover:text-blue-400 transition-colors">Terms of Service</Link>,{' '}
+                  <Link href="/privacy" target="_blank" className="text-white/60 underline underline-offset-2 hover:text-blue-400 transition-colors">Privacy Policy</Link>, and{' '}
+                  <Link href="/returns" target="_blank" className="text-white/60 underline underline-offset-2 hover:text-blue-400 transition-colors">Returns Policy</Link>.
+                </p>
                 <button
                   onClick={closeCart}
                   className="w-full text-white/40 text-xs tracking-wider uppercase hover:text-white/60 transition-colors"

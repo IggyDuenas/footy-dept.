@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { createServerClient } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase-admin'
 import Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic'
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const supabase = createServerClient()
+    const supabase = createAdminClient()
 
     try {
       const rawItems = session.metadata?.items
